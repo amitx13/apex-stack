@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import morgan from "morgan";
 import { errorHandler } from "./middlewares/errorHandler.js";
+import userRoutes from "./routes/user.routes.js";
 
 dotenv.config();
 
@@ -15,6 +16,8 @@ app.use(morgan("dev"));
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
+
+app.use('/api/v1', userRoutes);
 
 /* ---------- ERROR HANDLER (LAST) ---------- */
 app.use(errorHandler);

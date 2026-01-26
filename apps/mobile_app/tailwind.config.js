@@ -41,6 +41,19 @@ module.exports = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
+        // Add custom teal shades for flexibility
+        teal: {
+          50: '#e6f7f8',
+          100: '#b3e8ec',
+          200: '#80d9e0',
+          300: '#4dcad4',
+          400: '#1abbc8',
+          500: '#00ADB5', // Primary teal
+          600: '#009ba3',
+          700: '#008991',
+          800: '#00777f',
+          900: '#00656d',
+        },
       },
       borderRadius: {
         lg: 'var(--radius)',
@@ -59,10 +72,16 @@ module.exports = {
           from: { height: 'var(--radix-accordion-content-height)' },
           to: { height: '0' },
         },
+        // Add smooth fade for success states
+        'fade-in': {
+          '0%': { opacity: '0', transform: 'translateY(10px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        'fade-in': 'fade-in 0.3s ease-out',
       },
     },
   },

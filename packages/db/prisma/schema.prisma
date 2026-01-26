@@ -7,9 +7,291 @@ datasource db {
   provider = "postgresql"
 }
 
+enum Role {
+  ADMIN
+  USER
+}
+
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
+  id                String      @id @default(cuid())
+  name              String
+  phone             String      @unique
+  gasConsumerNumber String      @unique
+  role              Role        @default(USER)
+  isActive          Boolean     @default(false)
+  password          String
+  bankDetails       BankDetail?
+
+  sponsorId     String?
+  sponsor       User?   @relation("Sponsorship", fields: [sponsorId], references: [id])
+  referredUsers User[]  @relation("Sponsorship")
+
+  // User has multiple accounts (A', A'', A''')
+  accounts UserAccount[]
+
+  // But only ONE set of 3 wallets (shared across all accounts)
+  wallets Wallet[]
+  payments Payment[]
+
+  // All transactions across all accounts feed here
+  walletTransactions WalletTransaction[]
+
+  // Withdrawal requests
+  withdrawalRequests WithdrawalRequest[]
+
+  vendors Vendor[] @relation("vendorSponsor")
+
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sponsorId])
+}
+
+model BankDetail {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  bankName      String
+  accountNumber String
+  ifscCode      String
+  upiId         String?
+  qrCode        String?
+  gPay          String?
+  createdAt     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("bank_details")
+}
+
+enum EntryType {
+  REGISTRATION // Initial ₹199 payment
+  REENTRY // 163 points deducted from Incentive wallet
+}
+
+model UserAccount {
+  id     String @id @default(cuid())
+  userId String
+
+  // Matrix position in the global 5x5 tree
+  matrixPosition  Int     @unique // Global sequential position (1, 2, 3, ...)
+  parentAccountId String? // Parent node in 5x5 tree
+
+  // Matrix tree relationships
+  parent   UserAccount?  @relation("MatrixTree", fields: [parentAccountId], references: [id])
+  children UserAccount[] @relation("MatrixTree")
+
+  // Link to master user
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Entry type
+  entryType EntryType // REGISTRATION (₹199) or REENTRY (163 points)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([matrixPosition])
+  @@index([parentAccountId])
+}
+
+model Wallet {
+  id      String     @id @default(cuid())
+  userId  String
+  type    WalletType
+  balance Decimal    @default(0) @db.Decimal(15, 2)
+
+  // Link to master user
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Transactions
+  transactions WalletTransaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // One user can only have ONE wallet of each type
+  @@unique([userId, type])
+}
+
+model WalletTransaction {
+  id       String @id @default(cuid())
+  userId   String
+  walletId String
+
+  type   TransactionType // CREDIT or DEBIT
+  points Decimal         @db.Decimal(15, 2)
+
+  description   String
+  referenceType String? // "REGISTRATION", "REENTRY", "COMMISSION_LEVEL_1", "WITHDRAWAL", etc.
+  referenceId   String? // Related account/withdrawal ID
+
+  // Link to user and wallet
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([walletId])
+  @@index([createdAt])
+}
+
+model WithdrawalRequest {
+  id              String  @id @default(cuid())
+  userId          String
+  pointsRequested Decimal @db.Decimal(15, 2)
+
+  status            WithdrawalStatus @default(PENDING)
+  amountTransferred Decimal?         @db.Decimal(15, 2) // Actual ₹ transferred by admin
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Payment details
+  amount        Decimal       @db.Decimal(10, 2) // ₹199.00
+  points        Int           // 199 points
+  
+  type          PaymentType
+  status        PaymentStatus @default(PENDING)
+  
+  // Paytm details
+  orderId       String        @unique
+  transactionId String?       @unique
+  paytmResponse Json?
+  
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  
+  @@index([userId])
+  @@index([orderId])
+  @@index([status])
+}
+
+enum PaymentType {
+  REGISTRATION
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+
+// ============ ENUMS ============
+
+enum WalletType {
+  SPEND
+  INCENTIVE
+  WITHDRAWAL
+}
+
+enum TransactionType {
+  CREDIT
+  DEBIT
+}
+
+enum WithdrawalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+enum VendorRole {
+  VENDOR
+}
+
+enum VendorApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+// ============ VENDOR SIDE ============
+
+model Vendor {
+  id       String @id @default(cuid())
+  phone    String @unique
+  password String
+
+  // Shop details
+  shopName  String
+  ownerName String
+  category  String // GROCERY, RECHARGE, PETROL, etc.
+  role      VendorRole @default(VENDOR)
+  pincode   String
+
+  // KYC Documents
+  panNumber    String  @unique
+  aadharNumber String  @unique
+  gstNumber    String? @unique
+
+  sponsorId String?
+  sponsor   User?   @relation("vendorSponsor", fields: [sponsorId], references: [id])
+
+  // Payment details
+  bankDetails VendorBankDetail?
+
+  // Approval workflow
+  approvalStatus  VendorApprovalStatus // PENDING, APPROVED, REJECTED
+  rejectionReason String?
+  isActive        Boolean              @default(false)
+
+  commissionRate Decimal @db.Decimal(5, 2) // Commission percentage (e.g., 2.5 for 2.5%)
+
+  // Vendor transactions (payments received from users)
+  transactions VendorTransaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model VendorBankDetail {
+  id            String   @id @default(cuid())
+  vendorId      String   @unique
+  bankName      String
+  accountNumber String
+  ifscCode      String
+  upiId         String?
+  qrCode        String?
+  gPay          String?
+  createdAt     DateTime @default(now())
+
+  vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@map("vendor_bank_details")
+}
+
+model VendorTransaction {
+  id       String @id @default(cuid())
+  vendorId String
+
+  // Which user made the purchase
+  userId String
+
+  amount           Decimal  @db.Decimal(15, 2)
+  commissionAmount Decimal? @db.Decimal(15, 2)
+  description      String
+
+  // Payment status
+  status PaymentStatus @default(PENDING)
+
+  vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([vendorId])
+  @@index([userId])
+  @@index([createdAt])
 }

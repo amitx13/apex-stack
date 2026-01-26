@@ -2,7 +2,7 @@
   "name": "c_app",
   "private": true,
   "scripts": {
-    "dev": "turbo run dev --parallel",
+    "dev": "turbo run dev",
     "dev:mobile": "turbo run dev --filter=mobile_app",
     "dev:admin": "turbo run dev --filter=admin",
     "dev:server": "turbo run dev --filter=server",
