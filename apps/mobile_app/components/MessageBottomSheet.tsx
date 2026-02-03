@@ -1,7 +1,6 @@
-import { View, Pressable, StyleSheet } from 'react-native';
+import { View, Pressable, StyleSheet, Modal } from 'react-native';
 import { Text } from '@/components/ui/text';
-import React, { forwardRef, useImperativeHandle, useRef, useMemo, useCallback } from 'react';
-import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
+import React, { forwardRef, useImperativeHandle, useState, useCallback } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -23,10 +22,8 @@ export interface MessageBottomSheetRef {
 }
 
 export const MessageBottomSheet = forwardRef<MessageBottomSheetRef>((props, ref) => {
-    const bottomSheetRef = useRef<BottomSheet>(null);
-    const snapPoints = useMemo(() => ['22%'], []); // Increased from 15%
-
-    const [config, setConfig] = React.useState<MessageConfig>({
+    const [isVisible, setIsVisible] = useState(false);
+    const [config, setConfig] = useState<MessageConfig>({
         type: 'info',
         title: '',
         message: '',
@@ -35,24 +32,22 @@ export const MessageBottomSheet = forwardRef<MessageBottomSheetRef>((props, ref)
         cancelText: 'Cancel',
     });
 
-    useImperativeHandle(ref, () => ({
-        show: (newConfig: MessageConfig) => {
-            setConfig({ ...config, ...newConfig });
-            bottomSheetRef.current?.expand();
-        },
-        hide: () => {
-            bottomSheetRef.current?.close();
-        },
-    }));
-
     const handleClose = useCallback(() => {
-        bottomSheetRef.current?.close();
+        setIsVisible(false);
     }, []);
 
     const handleConfirm = useCallback(() => {
         config.onConfirm?.();
         handleClose();
-    }, [config]);
+    }, [config, handleClose]);
+
+    useImperativeHandle(ref, () => ({
+        show: (newConfig: MessageConfig) => {
+            setConfig({ ...config, ...newConfig });
+            setIsVisible(true);
+        },
+        hide: handleClose,
+    }));
 
     const getTypeConfig = () => {
         switch (config.type) {
@@ -74,7 +69,7 @@ export const MessageBottomSheet = forwardRef<MessageBottomSheetRef>((props, ref)
                 };
             case 'warning':
                 return {
-                    icon: 'warning' as const, // ✅ Fixed typo
+                    icon: 'warning' as const,
                     iconColor: '#F59E0B',
                     bgColor: 'rgba(245, 158, 11, 0.15)',
                     borderColor: 'rgba(245, 158, 11, 0.3)',
@@ -94,34 +89,25 @@ export const MessageBottomSheet = forwardRef<MessageBottomSheetRef>((props, ref)
 
     const typeConfig = getTypeConfig();
 
-    const renderBackdrop = useCallback(
-        (props: any) => (
-            <BottomSheetBackdrop
-                {...props}
-                disappearsOnIndex={-1}
-                appearsOnIndex={0}
-                opacity={0.5}
-                pressBehavior="close"
-            />
-        ),
-        []
-    );
-
     return (
-        <BottomSheet
-            ref={bottomSheetRef}
-            index={-1}
-            snapPoints={snapPoints}
-            enablePanDownToClose
-            backdropComponent={renderBackdrop}
-            backgroundStyle={styles.bottomSheetBackground}
-            handleIndicatorStyle={[
-                styles.handleIndicator,
-                { backgroundColor: typeConfig.iconColor },
-            ]}
+        <Modal
+            visible={isVisible}
+            transparent
+            animationType="fade"
+            onRequestClose={handleClose}
+            statusBarTranslucent
+            hardwareAccelerated
+            presentationStyle="overFullScreen"
         >
-            <BottomSheetView style={styles.contentContainer}>
-                {/* Icon + Title Side-by-Side */}
+            {/* Backdrop */}
+            <Pressable 
+                style={styles.backdrop} 
+                onPress={config.showCancel ? handleClose : undefined}
+            />
+
+            {/* Content */}
+            <View style={styles.content}>
+                {/* Icon + Title */}
                 <View style={styles.headerRow}>
                     <View
                         style={[
@@ -134,83 +120,139 @@ export const MessageBottomSheet = forwardRef<MessageBottomSheetRef>((props, ref)
                     >
                         <Ionicons
                             name={typeConfig.icon as any}
-                            size={22} // Slightly bigger for better visibility
+                            size={24}
                             color={typeConfig.iconColor}
                         />
                     </View>
 
-                    <Text className="text-foreground text-xl font-bold"> {/* Reduced from 2xl */}
+                    <Text className="text-foreground text-xl font-bold">
                         {config.title}
                     </Text>
                 </View>
 
                 {/* Message */}
-                <Text className="text-muted-foreground text-center mb-6 px-6 leading-5 text-sm">
+                <Text className="text-muted-foreground text-center mb-6 px-4 leading-5 text-sm">
                     {config.message}
                 </Text>
 
-                {/* Action Buttons */}
-                <View className="flex-row gap-3 w-full px-6">
-                    {config.showCancel && (
+                {/* Buttons - Conditional Layout */}
+                {config.showCancel ? (
+                    // Two buttons side-by-side (for warnings)
+                    <View style={styles.buttonsRow}>
                         <Pressable
                             onPress={handleClose}
-                            className="flex-1 bg-card/50 border border-border rounded-xl py-3 items-center active:opacity-70"
+                            style={styles.cancelButton}
                         >
                             <Text className="text-foreground font-semibold text-sm">
                                 {config.cancelText}
                             </Text>
                         </Pressable>
-                    )}
 
+                        <Pressable
+                            onPress={handleConfirm}
+                            style={styles.confirmButton}
+                        >
+                            <LinearGradient
+                                colors={typeConfig.gradientColors}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
+                                style={styles.gradient}
+                            >
+                                <Text className="text-white font-bold text-sm">
+                                    {config.confirmText}
+                                </Text>
+                            </LinearGradient>
+                        </Pressable>
+                    </View>
+                ) : (
+                    // Single full-width button (for success/error/info)
                     <Pressable
                         onPress={handleConfirm}
-                        className={`${config.showCancel ? 'flex-1' : 'flex-1'} rounded-xl overflow-hidden active:opacity-90`}
+                        style={styles.singleButton}
                     >
                         <LinearGradient
                             colors={typeConfig.gradientColors}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 1, y: 0 }}
-                            className="py-3 items-center"
+                            style={styles.gradient}
                         >
-                            <Text className="text-white font-bold text-sm">
+                            <Text className="text-white font-bold text-base">
                                 {config.confirmText}
                             </Text>
                         </LinearGradient>
                     </Pressable>
-                </View>
-            </BottomSheetView>
-        </BottomSheet>
+                )}
+            </View>
+        </Modal>
     );
 });
 
 const styles = StyleSheet.create({
-    contentContainer: {
+    backdrop: {
         flex: 1,
-        alignItems: 'center',
-        paddingTop: 16, // Reduced from 20
-        paddingBottom: 20,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
     },
-    bottomSheetBackground: {
+    content: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
         backgroundColor: '#222831',
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
-    },
-    handleIndicator: {
-        width: 40,
+        paddingTop: 24,
+        paddingBottom: 34,
+        paddingHorizontal: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+        elevation: 20,
     },
     headerRow: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         gap: 12,
-        marginBottom: 12,
+        marginBottom: 16,
     },
     iconContainer: {
-        width: 32, // Slightly bigger
-        height: 32,
-        borderRadius: 16,
+        width: 36,
+        height: 36,
+        borderRadius: 18,
         borderWidth: 2.5,
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    // Two buttons (Warning)
+    buttonsRow: {
+        flexDirection: 'row',
+        gap: 12,
+        width: '100%',
+    },
+    cancelButton: {
+        flex: 1,
+        backgroundColor: 'rgba(57, 62, 70, 0.6)',
+        borderWidth: 1,
+        borderColor: 'rgba(74, 79, 87, 0.5)',
+        borderRadius: 12,
+        paddingVertical: 14,
+        alignItems: 'center',
+    },
+    confirmButton: {
+        flex: 1,
+        borderRadius: 12,
+        overflow: 'hidden',
+    },
+    // Single button (Success/Error/Info)
+    singleButton: {
+        width: '100%',
+        borderRadius: 12,
+        overflow: 'hidden',
+    },
+    gradient: {
+        paddingVertical: 14,
+        alignItems: 'center',
+        width: '100%',
     },
 });

@@ -13,14 +13,17 @@ enum Role {
 }
 
 model User {
-  id                String      @id @default(cuid())
-  name              String
-  phone             String      @unique
-  gasConsumerNumber String      @unique
-  role              Role        @default(USER)
-  isActive          Boolean     @default(false)
-  password          String
-  bankDetails       BankDetail?
+  id                    String      @id @default(cuid())
+  name                  String
+  phone                 String      @unique
+  code                  String      @unique
+  gasConsumerNumber     String      @unique
+  role                  Role        @default(USER)
+  isRegistrationPayment Boolean     @default(false)
+  isGasConsumerVerified Boolean     @default(false)
+  isActive              Boolean     @default(false)
+  password              String
+  bankDetails           BankDetail?
 
   sponsorId     String?
   sponsor       User?   @relation("Sponsorship", fields: [sponsorId], references: [id])
@@ -28,9 +31,10 @@ model User {
 
   // User has multiple accounts (A', A'', A''')
   accounts UserAccount[]
+  reentryQueue ReentryQueue[]
 
   // But only ONE set of 3 wallets (shared across all accounts)
-  wallets Wallet[]
+  wallets  Wallet[]
   payments Payment[]
 
   // All transactions across all accounts feed here
@@ -93,6 +97,24 @@ model UserAccount {
   @@index([parentAccountId])
 }
 
+model ReentryQueue {
+  id        String   @id @default(cuid())
+  userId    String
+  status    ReentryStatus @default(PENDING)
+  createdAt DateTime @default(now())
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, status]) // ✅ Prevents duplicate PENDING entries
+  @@index([status])
+}
+
+enum ReentryStatus {
+  PENDING
+  PROCESSED
+}
+
+
 model Wallet {
   id      String     @id @default(cuid())
   userId  String
@@ -153,25 +175,25 @@ model WithdrawalRequest {
 }
 
 model Payment {
-  id            String        @id @default(cuid())
-  userId        String
-  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   // Payment details
-  amount        Decimal       @db.Decimal(10, 2) // ₹199.00
-  points        Int           // 199 points
-  
-  type          PaymentType
-  status        PaymentStatus @default(PENDING)
-  
+  amount Decimal @db.Decimal(10, 2) // ₹199.00
+  points Int // 199 points
+
+  type   PaymentType
+  status PaymentStatus @default(PENDING)
+
   // Paytm details
-  orderId       String        @unique
-  transactionId String?       @unique
+  orderId       String  @unique
+  transactionId String? @unique
   paytmResponse Json?
-  
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([userId])
   @@index([orderId])
   @@index([status])
@@ -187,9 +209,6 @@ enum PaymentStatus {
   FAILED
   REFUNDED
 }
-
-
-// ============ ENUMS ============
 
 enum WalletType {
   SPEND
@@ -209,6 +228,8 @@ enum WithdrawalStatus {
   COMPLETED
 }
 
+// ============ VENDOR SIDE ============
+
 enum VendorRole {
   VENDOR
 }
@@ -218,8 +239,6 @@ enum VendorApprovalStatus {
   APPROVED
   REJECTED
 }
-// ============ VENDOR SIDE ============
-
 model Vendor {
   id       String @id @default(cuid())
   phone    String @unique

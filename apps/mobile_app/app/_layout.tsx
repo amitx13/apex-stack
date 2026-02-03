@@ -1,7 +1,7 @@
+import 'react-native-reanimated';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
-import 'react-native-reanimated';
+import { useEffect, useRef } from 'react';
 import { PortalHost } from '@rn-primitives/portal';
 import { useAuthStore } from '../store/authStore';
 import { DarkTheme, Theme, ThemeProvider } from '@react-navigation/native';
@@ -22,7 +22,6 @@ const CustomTheme: Theme = {
     border: 'rgb(74, 79, 87)',
     notification: 'rgb(0, 173, 181)',
   },
-  // dark: true,
 };
 
 function RootLayoutNav() {
@@ -30,35 +29,22 @@ function RootLayoutNav() {
   const segments = useSegments();
   const router = useRouter();
 
-  // 1️⃣ Initialize on app start: SecureStore → Zustand
   useEffect(() => {
     initialize();
   }, []);
 
-  // Route protection and redirection
   useEffect(() => {
-    if (!isInitialized) return; // Wait for initialization
+    if (!isInitialized) return;
 
     const inAuthGroup = segments[0] === '(auth)';
 
-    console.log('🧭 Navigation check:', {
-      isAuthenticated,
-      inAuthGroup,
-      segments,
-    });
-
     if (!isAuthenticated && !inAuthGroup) {
-      // Not authenticated, redirect to login
-      console.log('➡️ Redirecting to login');
       router.replace('/login');
     } else if (isAuthenticated && inAuthGroup) {
-      // Authenticated, redirect to app
-      console.log('➡️ Redirecting to app');
       router.replace('/(tabs)');
     }
   }, [isAuthenticated, segments, isInitialized]);
 
-  // Show loading screen while initializing
   if (!isInitialized) {
     return (
       <View className="flex-1 bg-background items-center justify-center">
@@ -87,30 +73,31 @@ function RootLayoutNav() {
   );
 }
 
+// In your app/_layout.tsx, update the RootLayout function:
 export default function RootLayout() {
 
   return (
-    <SafeAreaProvider>
-      <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
         <ThemeProvider value={CustomTheme}>
           <SafeAreaView
             style={{
               flex: 1,
               backgroundColor: CustomTheme.colors.background,
             }}
-            edges={['top']} // only protect status bar area
+            edges={['top']}
           >
             <MessageProvider>
               <StatusBar
                 style="light"
-                backgroundColor={CustomTheme.colors.background} // Android
+                backgroundColor={CustomTheme.colors.background}
               />
               <RootLayoutNav />
               <PortalHost />
             </MessageProvider>
           </SafeAreaView>
         </ThemeProvider>
-      </GestureHandlerRootView>
-    </SafeAreaProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

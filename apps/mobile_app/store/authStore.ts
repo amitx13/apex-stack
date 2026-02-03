@@ -1,20 +1,7 @@
 import { create } from 'zustand';
 import { secureStorage } from '../lib/secureStorage';
 import { api } from '@/lib/axios';
-
-enum Role {
-  "USER",
-  "VENDOR"
-}
-
-interface User {
-  id: string;
-  name: string;
-  isActive: boolean
-  phone: string;
-  role: Role;
-  gasConsumerNumber: string;
-}
+import { User } from '@repo/types'
 
 interface SignupData {
   name: string;
@@ -35,6 +22,7 @@ interface AuthState {
   // Actions
   initialize: () => Promise<void>;
   login: (userId: string, password: string) => Promise<void>;
+  loginWithOtp: (phone: string) => Promise<void>;
   signup: (data: SignupData) => Promise<void>;
   logout: () => Promise<void>;
   setToken: (token: string | null) => void;
@@ -113,6 +101,40 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
+  loginWithOtp: async (firebaseIdToken: string) => {
+    set({ isLoading: true });
+    try {
+      console.log('🔐 Logging in...');
+
+      // Call backend API
+      const response = await api.post(`/auth/loginWithOtp`, {
+        firebaseToken: firebaseIdToken
+      });
+
+      const { token, user } = response.data;
+
+      // Save to SecureStore (persistent)
+      await Promise.all([
+        secureStorage.saveToken(token),
+        secureStorage.saveUser(user),
+      ]);
+      console.log('💾 Token saved to SecureStore');
+
+      // Update Zustand (runtime)
+      set({
+        token,
+        user,
+        isAuthenticated: true,
+        isLoading: false,
+      });
+      console.log('✅ Login successful');
+    } catch (error: any) {
+      console.error('❌ Login failed:', error);
+      set({ isLoading: false });
+      throw new Error(error.response?.data?.message || error.message || 'Login failed');
+    }
+  },
+
   // 2️⃣ Signup: API → SecureStore (save) → Zustand (state)
   signup: async (data: SignupData) => {
     set({ isLoading: true });
@@ -120,7 +142,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       console.log('📝 Signing up...');
 
       // Call backend API
-      const response = await api.post(`/auth/signup`, data);
+      const response = await api.post(`/auth/signUp`, data);
 
       const { token, user } = response.data;
 

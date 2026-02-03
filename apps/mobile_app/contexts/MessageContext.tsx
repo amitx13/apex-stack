@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useRef } from 'react';
 import { MessageBottomSheet, MessageBottomSheetRef, MessageType } from '@/components/MessageBottomSheet';
-import { Portal } from '@rn-primitives/portal';
 
 interface MessageContextType {
   showMessage: (
@@ -85,11 +84,7 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
       }}
     >
       {children}
-      
-      {/* Global Message Bottom Sheet */}
-      <Portal name="global-message-sheet">
-        <MessageBottomSheet ref={messageRef} />
-      </Portal>
+      <MessageBottomSheet ref={messageRef} />
     </MessageContext.Provider>
   );
 }

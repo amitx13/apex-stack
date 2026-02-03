@@ -25,13 +25,8 @@ export function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   const { user } = useAuthStore()
   const { showWarning } = useMessage();
 
-
   const styles = StyleSheet.create({
     container: {
-      position: 'absolute',
-      bottom: 0,
-      left: 0,
-      right: 0,
       height: TAB_BAR_HEIGHT + insets.bottom,
       paddingBottom: insets.bottom,
       backgroundColor: 'rgba(34, 40, 49, 0.95)',
@@ -54,13 +49,11 @@ export function CustomTabBar({ state, navigation }: BottomTabBarProps) {
       ]}
       className="border-t border-border/50"
     >
-      {/* Tab items container */}
       <View style={styles.tabsContainer}>
         {state.routes.map((route, index) => {
           const isFocused = state.index === index;
-          const isCenter = index === 2; // Middle button (Scan & Pay)
+          const isCenter = index === 2;
 
-          // Icon mapping
           const getIcon = () => {
             if (route.name === 'index') return isFocused ? 'home' : 'home-outline';
             if (route.name === 'wallet') return isFocused ? 'wallet' : 'wallet-outline';
@@ -87,10 +80,10 @@ export function CustomTabBar({ state, navigation }: BottomTabBarProps) {
             });
 
             if (!isFocused && !event.defaultPrevented) {
-              if (!user?.isActive && route.name !== 'index') { // Allow home screen
+              if (!user?.isActive && route.name !== 'index') {
                 showWarning(
-                  'Account Inactive', // Title (first param)
-                  'Please activate your account to access this feature.' // Message (second param)
+                  'Account Inactive',
+                  'Please activate your account to access this feature.',
                 );
                 return
               }
@@ -98,7 +91,6 @@ export function CustomTabBar({ state, navigation }: BottomTabBarProps) {
             }
           };
 
-          // Render elevated center button with animation
           if (isCenter) {
             return (
               <CenterScanButton
@@ -110,7 +102,6 @@ export function CustomTabBar({ state, navigation }: BottomTabBarProps) {
             );
           }
 
-          // Render regular tab buttons
           return (
             <TabButton
               key={route.key}
@@ -126,7 +117,6 @@ export function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   );
 }
 
-// Animated Center Scan Button Component
 function CenterScanButton({
   onPress,
   label,
@@ -136,29 +126,25 @@ function CenterScanButton({
   label: string;
   isFocused: boolean;
 }) {
-  // Pulsing animation
   const pulseAnim = useSharedValue(1);
 
   React.useEffect(() => {
-    // Continuous pulse effect (expand and shrink)
     pulseAnim.value = withRepeat(
       withSequence(
         withTiming(1.1, { duration: 1000 }),
         withTiming(1, { duration: 1000 })
       ),
-      -1, // Infinite repeat
+      -1,
       false
     );
   }, []);
 
-  // Scale animation
   const scaleAnim = useAnimatedStyle(() => ({
     transform: [
       { scale: pulseAnim.value },
     ],
   }));
 
-  // Icon rotation animation (optional, remove if you don't want rotation)
   const rotateAnim = useAnimatedStyle(() => ({
     transform: [
       {
@@ -184,7 +170,6 @@ function CenterScanButton({
           end={{ x: 1, y: 1 }}
           style={styles.centerButtonGradient}
         >
-          {/* Animated QR icon */}
           <Animated.View style={rotateAnim}>
             <MaterialCommunityIcons name="qrcode-scan" size={36} color="#222831" />
           </Animated.View>
@@ -197,7 +182,6 @@ function CenterScanButton({
   );
 }
 
-// Individual Tab Button Component
 function TabButton({
   isFocused,
   icon,

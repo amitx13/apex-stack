@@ -4,6 +4,8 @@ import dotenv from "dotenv";
 import morgan from "morgan";
 import { errorHandler } from "./middlewares/errorHandler.js";
 import userRoutes from "./routes/user.routes.js";
+import paymentRoutes from './routes/payment.routes.js'
+import { startReentryCron } from "./jobs/reentry-cron.js";
 
 dotenv.config();
 
@@ -18,9 +20,12 @@ app.get("/health", (_req, res) => {
 });
 
 app.use('/api/v1', userRoutes);
+app.use('/api/v1/payment', paymentRoutes); 
 
 /* ---------- ERROR HANDLER (LAST) ---------- */
 app.use(errorHandler);
+
+startReentryCron()
 
 const PORT = process.env.PORT || 3000;
 
