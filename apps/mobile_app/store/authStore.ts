@@ -21,8 +21,9 @@ interface AuthState {
 
   // Actions
   initialize: () => Promise<void>;
-  login: (userId: string, password: string) => Promise<void>;
+  login: (phoneNum: string, password: string) => Promise<void>;
   loginWithOtp: (phone: string) => Promise<void>;
+  fetchUserDetails: () => Promise<void>;
   signup: (data: SignupData) => Promise<void>;
   logout: () => Promise<void>;
   setToken: (token: string | null) => void;
@@ -42,19 +43,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       console.log('🔄 Initializing auth from SecureStore...');
 
-      const [token, user] = await Promise.all([
-        secureStorage.getToken(),
-        secureStorage.getUser(),
-      ]);
+      const token = await secureStorage.getToken();
 
-      if (token && user) {
-        console.log('✅ Found token and user in SecureStore');
+      if (token) {
+        console.log('✅ Found token in SecureStore');
+
         set({
           token,
-          user,
           isAuthenticated: true,
           isInitialized: true,
         });
+
+        // ✅ FETCH FRESH USER DATA
+        try {
+          await get().fetchUserDetails();
+        } catch (error) {
+          // If token is invalid, logout
+          console.error('Token invalid, logging out');
+          await get().logout();
+        }
       } else {
         console.log('❌ No token found in SecureStore');
         set({ isInitialized: true });
@@ -66,72 +73,94 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   // 2️⃣ Login: API → SecureStore (save) → Zustand (state)
-  login: async (userId: string, password: string) => {
+  login: async (phone: string, password: string) => {
     set({ isLoading: true });
     try {
       console.log('🔐 Logging in...');
 
-      // Call backend API
       const response = await api.post(`/auth/login`, {
-        userId,
+        phone,
         password,
       });
 
-      const { token, user } = response.data;
+      const { token } = response.data;
 
-      // Save to SecureStore (persistent)
-      await Promise.all([
-        secureStorage.saveToken(token),
-        secureStorage.saveUser(user),
-      ]);
+      // Save token
+      await secureStorage.saveToken(token);
       console.log('💾 Token saved to SecureStore');
 
-      // Update Zustand (runtime)
+      // Update state with token
       set({
         token,
-        user,
         isAuthenticated: true,
-        isLoading: false,
       });
+
+      // ✅ FETCH USER DATA
+      await get().fetchUserDetails();
+
       console.log('✅ Login successful');
     } catch (error: any) {
       console.error('❌ Login failed:', error);
-      set({ isLoading: false });
       throw new Error(error.response?.data?.message || error.message || 'Login failed');
+    } finally {
+      set({ isLoading: false });  // Move to finally block
     }
   },
+
 
   loginWithOtp: async (firebaseIdToken: string) => {
     set({ isLoading: true });
     try {
-      console.log('🔐 Logging in...');
+      console.log('🔐 Logging in with OTP...');
 
-      // Call backend API
       const response = await api.post(`/auth/loginWithOtp`, {
         firebaseToken: firebaseIdToken
       });
 
-      const { token, user } = response.data;
+      const { token } = response.data;
 
-      // Save to SecureStore (persistent)
-      await Promise.all([
-        secureStorage.saveToken(token),
-        secureStorage.saveUser(user),
-      ]);
+      await secureStorage.saveToken(token);
       console.log('💾 Token saved to SecureStore');
 
-      // Update Zustand (runtime)
       set({
         token,
-        user,
         isAuthenticated: true,
-        isLoading: false,
       });
+
+      // ✅ FETCH USER DATA
+      await get().fetchUserDetails();
+
       console.log('✅ Login successful');
     } catch (error: any) {
       console.error('❌ Login failed:', error);
-      set({ isLoading: false });
       throw new Error(error.response?.data?.message || error.message || 'Login failed');
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+
+  fetchUserDetails: async () => {
+    set({ isLoading: true });
+    try {
+      console.log('🔐 Fetching user details...');
+
+      const response = await api.get(`/auth/fetchMe`);
+      const { user } = response.data;
+
+      // Save to SecureStore
+      await secureStorage.saveUser(user);
+
+      set({
+        user,
+        isLoading: false,  // ✅ Add this
+      });
+
+      console.log('✅ Fetch successful');
+    } catch (error: any) {
+      console.error('❌ Fetch failed:', error);
+      set({ isLoading: false });
+      throw new Error(error.response?.data?.message || error.message || 'Fetch failed');
     }
   },
 

@@ -18,21 +18,9 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="wallet"
-          options={{
-            title: 'Wallet',
-          }}
-        />
-        <Tabs.Screen
           name="scan"
           options={{
             title: 'Scan & Pay',
-          }}
-        />
-        <Tabs.Screen
-          name="history"
-          options={{
-            title: 'History',
           }}
         />
         <Tabs.Screen
@@ -41,15 +29,25 @@ export default function TabLayout() {
             title: 'Profile',
           }}
         />
+        <Tabs.Screen
+          name="spendwallet"
+          options={{
+            title: 'Spend Wallet',
+          }}
+        />
+        <Tabs.Screen
+          name="history"
+          options={{
+            title: 'Spend Wallet',
+          }}
+        />
+        <Tabs.Screen
+          name="withdrawalwallet"
+          options={{
+            title: 'Spend Wallet',
+          }}
+        />
       </Tabs>
     </View>
   );
 }
-
-/* 
-      screenOptions={{
-        headerShown: false,
-        tabBarBackground: () => null,
-        tabBarHideOnKeyboard: true,
-      }}
-*/

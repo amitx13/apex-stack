@@ -12,14 +12,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import { FirebaseRecaptchaVerifierModal } from "expo-firebase-recaptcha";
-import { signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
-import { auth } from "../../lib/firebase";
-
+import { FirebaseAuthTypes } from '@react-native-firebase/auth';
+import auth from '@/lib/firebase';
 
 export default function LoginScreen() {
     // Password Login States
-    const [userId, setUserId] = useState('');
+    const [phoneNum, setPhoneNum] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
@@ -32,8 +30,7 @@ export default function LoginScreen() {
     const [showOtpInput, setShowOtpInput] = useState(false);
     const [sendingOtp, setSendingOtp] = useState(false);
     const [isVerifying, setIsVerifying] = useState<boolean>(false);
-    const [confirmation, setConfirmation] = useState<ConfirmationResult | null>(null);
-    const recaptchaRef = useRef<FirebaseRecaptchaVerifierModal>(null);
+    const [confirmation, setConfirmation] = useState<FirebaseAuthTypes.ConfirmationResult | null>(null);
 
     // OTP Input Refs
     const otpInputs = useRef<Array<TextInput | null>>([]);
@@ -63,13 +60,13 @@ export default function LoginScreen() {
 
     // Handle Password Login
     const handleLogin = async () => {
-        if (!userId || !password) {
+        if (!phoneNum || !password) {
             setError('Please fill in all fields');
             return;
         }
 
         try {
-            await login(userId, password);
+            await login(phoneNum, password);
         } catch (err: any) {
             setError(err.message || 'Login failed. Please try again.');
         }
@@ -88,11 +85,7 @@ export default function LoginScreen() {
 
             const phoneNumber = "+91" + phone;
 
-            const result = await signInWithPhoneNumber(
-                auth,
-                phoneNumber,
-                recaptchaRef.current!
-            );
+            const result = await auth().signInWithPhoneNumber(phoneNumber);
 
             console.log("OTP sent successfully");
 
@@ -127,11 +120,7 @@ export default function LoginScreen() {
 
             const phoneNumber = "+91" + phone;
 
-            const result = await signInWithPhoneNumber(
-                auth,
-                phoneNumber,
-                recaptchaRef.current!
-            );
+            const result = await auth().signInWithPhoneNumber(phoneNumber);
 
             console.log("OTP resent successfully");
 
@@ -254,7 +243,7 @@ export default function LoginScreen() {
         setShowOtpLogin(!showOtpLogin);
         setError('');
         // Reset states
-        setUserId('');
+        setPhoneNum('');
         setPassword('');
         setPhone('');
         setOtp(['', '', '', '', '', '']);
@@ -264,13 +253,6 @@ export default function LoginScreen() {
 
     return (
         <View className="flex-1">
-            {/* Firebase Recaptcha Modal */}
-            <FirebaseRecaptchaVerifierModal
-                ref={recaptchaRef}
-                firebaseConfig={auth.app.options}
-                attemptInvisibleVerification={true}
-            />
-
             <LinearGradient
                 colors={['#222831', '#393E46', '#00ADB5']}
                 start={{ x: 0, y: 0 }}
@@ -326,17 +308,19 @@ export default function LoginScreen() {
                                 {/* PASSWORD LOGIN */}
                                 <View className="mb-4">
                                     <Text className="text-foreground/80 font-semibold mb-2 text-sm">
-                                        USER ID
+                                        Mobile Number
                                     </Text>
                                     <View className="bg-background/60 border border-border/50 rounded-xl flex-row items-center px-4 py-1">
                                         <Ionicons name="person-outline" size={22} color="#00ADB5" />
                                         <TextInput
-                                            value={userId}
-                                            onChangeText={setUserId}
-                                            placeholder="Enter your User ID"
+                                            value={phoneNum}
+                                            onChangeText={setPhoneNum}
+                                            placeholder="10 digit phone number"
                                             placeholderTextColor="#6B7280"
+                                            keyboardType="phone-pad"
+                                            maxLength={10}
                                             className="flex-1 text-foreground py-3.5 px-3 text-base"
-                                            autoCapitalize="none"
+
                                         />
                                     </View>
                                 </View>

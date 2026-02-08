@@ -13,15 +13,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
-import { FirebaseRecaptchaVerifierModal } from "expo-firebase-recaptcha";
-import { signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
-import { auth } from "../../lib/firebase";
+import { FirebaseAuthTypes } from '@react-native-firebase/auth';
 import type { SignUpUserInput } from '@repo/types';
+import { auth } from '@/lib/firebase';
 
 
 export default function SignupScreen() {
-
-  const recaptchaRef = useRef<FirebaseRecaptchaVerifierModal>(null);
 
   const [formData, setFormData] = useState<SignUpUserInput>({
     name: '',
@@ -33,7 +30,7 @@ export default function SignupScreen() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [otp, setOtp] = useState("");
-  const [confirmation, setConfirmation] = useState<ConfirmationResult | null>(null);
+  const [confirmation, setConfirmation] = useState<FirebaseAuthTypes.ConfirmationResult | null>(null);
   const [showOtp, setShowOtp] = useState(false);
   const [error, setError] = useState("");
   const [sendingOtp, setSendingOtp] = useState(false);
@@ -95,11 +92,7 @@ export default function SignupScreen() {
 
       const phone = "+91" + formData.phone;
 
-      const result = await signInWithPhoneNumber(
-        auth,
-        phone,
-        recaptchaRef.current!
-      );
+      const result = await auth().signInWithPhoneNumber(phone);
 
       setConfirmation(result);
       setShowOtp(true);
@@ -133,11 +126,7 @@ export default function SignupScreen() {
 
       const phone = "+91" + formData.phone;
 
-      const result = await signInWithPhoneNumber(
-        auth,
-        phone,
-        recaptchaRef.current!
-      );
+      const result = await auth().signInWithPhoneNumber(phone);
 
       setConfirmation(result);
       setResendTimer(60);
@@ -204,13 +193,6 @@ export default function SignupScreen() {
 
   return (
     <View className="flex-1">
-
-      {/* Firebase Recaptcha Modal */}
-      <FirebaseRecaptchaVerifierModal
-        ref={recaptchaRef}
-        firebaseConfig={auth.app.options}
-        attemptInvisibleVerification={true}
-      />
 
       {/* Animated Gradient Background */}
       <LinearGradient

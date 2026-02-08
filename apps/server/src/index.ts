@@ -25,7 +25,7 @@ app.use('/api/v1/payment', paymentRoutes);
 /* ---------- ERROR HANDLER (LAST) ---------- */
 app.use(errorHandler);
 
-startReentryCron()
+// startReentryCron()
 
 const PORT = process.env.PORT || 3000;
 

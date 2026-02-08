@@ -1,4 +1,4 @@
-// apps/mobile_app/lib/firebase.ts
+/* // apps/mobile_app/lib/firebase.ts
 
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
@@ -14,3 +14,29 @@ const firebaseConfig = {
 
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
+ */
+
+import { firebase } from '@react-native-firebase/app';
+import auth from '@react-native-firebase/auth';
+
+// Firebase config from google-services.json
+const firebaseConfig = {
+  apiKey: "AIzaSyAu9xTcKdU_9QmDB47B8CGUtwCvTUh89gw",
+  authDomain: "phoneauth-e2c75.firebaseapp.com",
+  projectId: "phoneauth-e2c75",
+  databaseURL: "https://phoneauth-e2c75-default-rtdb.firebaseio.com",
+  storageBucket: "phoneauth-e2c75.firebasestorage.app",
+  messagingSenderId: "724955628302",
+  appId: "1:724955628302:android:f57bc70a4875c95daccd5f",
+};
+
+// Initialize Firebase if not already initialized
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+  console.log('✅ Firebase initialized successfully');
+} else {
+  console.log('✅ Firebase already initialized');
+}
+
+export { auth };
+export default auth;

@@ -7,27 +7,20 @@ import admin from "../config/firebase.admin.js";
 import { getConflictingFields, getReadableFieldName } from "../utils/prismaErrorHelper.js";
 
 export const login = async (req: Request, res: Response) => {
-    const { userId, password } = req.body;
+    const { phone, password } = req.body;
 
-    if (!userId || !password) {
-        throw new ApiError(400, "User ID and password are required");
+    if (!phone || !password) {
+        throw new ApiError(400, "Mobile number and password are required");
     }
 
     const user = await prisma.user.findUnique({
         where: {
-            id: userId
+            phone,
         },
         select: {
             id: true,
-            name: true,
-            phone: true,
-            role: true,
-            isActive: true,
             gasConsumerNumber: true,
             password: true,
-            sponsorId: true,
-            isRegistrationPayment: true,
-            isGasConsumerVerified: true,
         }
     });
 
@@ -48,16 +41,6 @@ export const login = async (req: Request, res: Response) => {
     res.json({
         success: true,
         token,
-        user: {
-            id: user.id,
-            name: user.name,
-            phone: user.phone,
-            role: user.role,
-            isActive: user.isActive,
-            gasConsumerNumber: user.gasConsumerNumber,
-            isRegistrationPayment: user.isRegistrationPayment,
-            isGasConsumerVerified: user.isGasConsumerVerified
-        },
         message: "Logged in",
     });
 };
@@ -84,15 +67,8 @@ export const loginWithOtp = async (req: Request, res: Response) => {
         },
         select: {
             id: true,
-            name: true,
-            phone: true,
-            role: true,
-            isActive: true,
             gasConsumerNumber: true,
             password: true,
-            sponsorId: true,
-            isRegistrationPayment: true,
-            isGasConsumerVerified: true,
         }
     });
 
@@ -109,16 +85,6 @@ export const loginWithOtp = async (req: Request, res: Response) => {
     res.json({
         success: true,
         token,
-        user: {
-            id: user.id,
-            name: user.name,
-            phone: user.phone,
-            role: user.role,
-            isActive: user.isActive,
-            gasConsumerNumber: user.gasConsumerNumber,
-            isRegistrationPayment: user.isRegistrationPayment,
-            isGasConsumerVerified: user.isGasConsumerVerified
-        },
         message: "Logged in",
     });
 };
@@ -160,7 +126,7 @@ export async function createUserSafely(data: {
 
             if (err.code === "P2002") {
                 const fields = getConflictingFields(err);
-                
+
                 // Retry for auto-generated fields
                 if (fields?.includes("id") || fields?.includes("code")) {
                     continue;
@@ -227,3 +193,76 @@ export const createNewUserAccount = async (req: Request, res: Response) => {
         message: "Signing up..."
     });
 };
+
+
+export const fetchMe = async (req: Request, res: Response) => {
+
+    const userId = req.user?.userId;
+
+    if (!userId) {
+        throw new ApiError(401, "Unauthorized");
+    }
+
+    const user = await prisma.user.findUnique({
+        where: {
+            id: userId
+        },
+        select: {
+            id: true,
+            name: true,
+            phone: true,
+            role: true,
+            isActive: true,
+            gasConsumerNumber: true,
+            password: true,
+            isRegistrationPayment: true,
+            isGasConsumerVerified: true,
+            _count: {
+                select: {
+                    referredUsers: {
+                        where: {
+                            isActive: true  // ✅ Filter in database
+                        }
+                    }
+                }
+            },
+            wallets: {
+                where: {
+                    type: {
+                        in: ["SPEND", "WITHDRAWAL"]
+                    }
+                },
+                select: {
+                    type: true,
+                    balance: true,
+                }
+            }
+        }
+    });
+
+    if (!user) {
+        throw new ApiError(404, "Account not found. Please sign up first.");
+    }
+
+    const spendWallet = user.wallets.find((w) => w.type === "SPEND");
+    const withdrawalWallet = user.wallets.find((w) => w.type === "WITHDRAWAL");
+
+    console.log(user)
+
+    res.json({
+        success: true,
+        user: {
+            id: user.id,
+            name: user.name,
+            phone: user.phone,
+            role: user.role,
+            isActive: user.isActive,
+            gasConsumerNumber: user.gasConsumerNumber,
+            isRegistrationPayment: user.isRegistrationPayment,
+            isGasConsumerVerified: user.isGasConsumerVerified,
+            membersCount: user._count.referredUsers,
+            spendBalance: spendWallet ? spendWallet.balance.toString() : null,
+            withdrawalBalance: withdrawalWallet ? withdrawalWallet.balance.toString() : null
+        },
+    });
+}

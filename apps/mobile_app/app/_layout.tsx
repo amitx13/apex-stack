@@ -85,7 +85,7 @@ export default function RootLayout() {
               flex: 1,
               backgroundColor: CustomTheme.colors.background,
             }}
-            edges={['top']}
+            edges={['top','bottom']}
           >
             <MessageProvider>
               <StatusBar

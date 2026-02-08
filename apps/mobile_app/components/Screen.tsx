@@ -7,7 +7,13 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TAB_BAR_HEIGHT } from "./CustomTabBar";
 
-export function Screen({ children }: { children: React.ReactNode }) {
+export function Screen({ 
+  children,
+  hasTabBar = true // ✅ Add this prop
+}: { 
+  children: React.ReactNode;
+  hasTabBar?: boolean;
+}) {
   const insets = useSafeAreaInsets();
   const translateX = useSharedValue(30);
   const opacity = useSharedValue(0);
@@ -32,7 +38,7 @@ export function Screen({ children }: { children: React.ReactNode }) {
       style={[
         {
           flex: 1,
-          paddingBottom: TAB_BAR_HEIGHT + insets.bottom,
+          paddingBottom: hasTabBar ? TAB_BAR_HEIGHT + insets.bottom : 0, // ✅ Conditional padding
         },
         style,
       ]}
