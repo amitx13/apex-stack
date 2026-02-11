@@ -2,8 +2,11 @@
 
 import { prisma, WalletType } from '@repo/db';
 import { splitPointsToWallets } from '../utils/calculation.helpers';
-import { Decimal } from '@repo/db/generated/prisma/internal/prismaNamespace';
 import { MLM_CONFIG } from '../config/mlm.constants';
+import { Prisma } from "@repo/db";
+
+type Decimal = Prisma.Decimal;
+const Decimal = Prisma.Decimal;
 
 const REENTRY_THRESHOLD = MLM_CONFIG.REENTRY_THRESHOLD;
 
@@ -114,8 +117,8 @@ export async function distributeTo3Wallets(
           },
         });
       } catch (error: any) {
-        if(error?.message){
-          console.log("error is re-entry queue:",error.message)
+        if (error?.message) {
+          console.log("error is re-entry queue:", error.message)
         }
       }
     }
@@ -225,8 +228,8 @@ export async function deductFromWallet(
   description: string,
   referenceType?: string,
   referenceId?: string
-) {
-  await prisma.$transaction(async (tx) => {
+): Promise<string> {
+  const trxnId = await prisma.$transaction(async (tx) => {
     const wallet = await tx.wallet.update({
       where: {
         userId_type: {
@@ -239,7 +242,7 @@ export async function deductFromWallet(
       },
     });
 
-    await tx.walletTransaction.create({
+    const trxn = await tx.walletTransaction.create({
       data: {
         userId,
         walletId: wallet.id,
@@ -250,7 +253,44 @@ export async function deductFromWallet(
         referenceId,
       },
     });
+    return trxn.id
   });
 
   console.log(`✅ Deducted ${points} points from ${walletType} wallet`);
+  return trxnId;
+}
+
+export const creditToSpendWallet = async (
+  userId: string,
+  walletType: WalletType,
+  points: number | Decimal,
+  description: string,
+  referenceType?: string,
+  referenceId?: string
+) => {
+  await prisma.$transaction(async (tx) => {
+    const spendWallet = await tx.wallet.update({
+      where: {
+        userId_type: {
+          userId,
+          type: walletType,
+        },
+      },
+      data: {
+        balance: { increment: points },
+      },
+    });
+
+    await tx.walletTransaction.create({
+      data: {
+        userId,
+        walletId: spendWallet.id,
+        type: 'CREDIT',
+        points: new Decimal(points),
+        description: `${description} (${walletType} ${points} points)`,
+        referenceType,
+        referenceId,
+      },
+    });
+  })
 }

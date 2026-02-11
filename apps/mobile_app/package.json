@@ -3,7 +3,7 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
-    "dev": "expo start --dev-client",
+    "dev": "expo start --dev-client -c",
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo run:android",
@@ -42,6 +42,7 @@
     "expo-symbols": "~1.0.8",
     "expo-system-ui": "~6.0.9",
     "expo-web-browser": "~15.0.10",
+    "lottie-react-native": "~7.3.1",
     "nativewind": "^4.2.1",
     "paytmpayments-allinone-react-native": "^1.0.7",
     "prettier-plugin-tailwindcss": "^0.5.14",

@@ -247,7 +247,7 @@ export const fetchMe = async (req: Request, res: Response) => {
     const spendWallet = user.wallets.find((w) => w.type === "SPEND");
     const withdrawalWallet = user.wallets.find((w) => w.type === "WITHDRAWAL");
 
-    console.log(user)
+    // console.log(user)
 
     res.json({
         success: true,

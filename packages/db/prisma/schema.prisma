@@ -39,6 +39,7 @@ model User {
 
   // All transactions across all accounts feed here
   walletTransactions WalletTransaction[]
+  serviceTransactions ServiceTransaction[]
 
   // Withdrawal requests
   withdrawalRequests WithdrawalRequest[]
@@ -114,7 +115,6 @@ enum ReentryStatus {
   PROCESSED
 }
 
-
 model Wallet {
   id      String     @id @default(cuid())
   userId  String
@@ -146,11 +146,13 @@ model WalletTransaction {
   referenceType String? // "REGISTRATION", "REENTRY", "COMMISSION_LEVEL_1", "WITHDRAWAL", etc.
   referenceId   String? // Related account/withdrawal ID
 
+  serviceTransaction ServiceTransaction?
   // Link to user and wallet
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
+
 
   @@index([userId])
   @@index([walletId])
@@ -197,6 +199,60 @@ model Payment {
   @@index([userId])
   @@index([orderId])
   @@index([status])
+}
+
+enum ServiceType {
+  MOBILE_PREPAID
+  DTH
+  ELECTRICITY
+  GAS
+  WATER
+}
+
+enum ServiceStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+// New model
+model ServiceTransaction {
+  id              String        @id @default(cuid())
+  userId          String
+  
+  // Service details
+  serviceType     ServiceType
+  operatorName    String        // "Airtel", "Jio", etc.
+  operatorCode    String        // "AT", "RJ" (skey from IMWallet)
+  amount          Decimal       @db.Decimal(10, 2)
+  
+  // Customer details
+  mobileNumber    String        // Mobile number being recharged
+  
+  // IMWallet tracking
+  orderId         String        @unique  // Your generated order ID
+  imwalletTxnId   String?       @unique  // requestID from IMWallet
+  operatorTxnId   String?                // oprID from IMWallet
+  imwalletResponse Json?                 // Full API response
+  
+  status          ServiceStatus @default(PENDING)
+  commission      Decimal?      @db.Decimal(10, 2)  // gross_comm from IMWallet (your profit)
+  
+  // Wallet linkage
+  walletTransactionId String?   @unique
+  walletTransaction   WalletTransaction? @relation(fields: [walletTransactionId], references: [id])
+  
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([orderId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 enum PaymentType {

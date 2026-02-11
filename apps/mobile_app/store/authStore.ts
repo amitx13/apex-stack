@@ -43,6 +43,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       console.log('🔄 Initializing auth from SecureStore...');
 
+      // await new Promise(resolve => setTimeout(resolve, 5000));
+
       const token = await secureStorage.getToken();
 
       if (token) {
@@ -54,7 +56,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           isInitialized: true,
         });
 
-        // ✅ FETCH FRESH USER DATA
         try {
           await get().fetchUserDetails();
         } catch (error) {

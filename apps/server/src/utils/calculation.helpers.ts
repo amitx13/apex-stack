@@ -1,7 +1,9 @@
 // apps/server/src/utils/calculation.helpers.ts
 
-import { Decimal } from "@repo/db/generated/prisma/internal/prismaNamespace";
+import { Prisma } from "@repo/db";
 
+type Decimal = Prisma.Decimal;
+const Decimal = Prisma.Decimal;
 
 /**
  * Split points into 3 wallets: SPEND (60%), INCENTIVE (30%), WITHDRAWAL (10%)

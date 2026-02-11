@@ -7,5 +7,5 @@ export const PaytmConfig = {
   // Staging URLs
   INITIATE_TXN_URL: 'https://securestage.paytmpayments.com/theia/api/v1/initiateTransaction',
   TXN_STATUS_URL: 'https://securestage.paytmpayments.com/v3/order/status',
-  CALLBACK_URL: 'https://ettie-approachless-acapella.ngrok-free.dev/api/v1/payment/callback',
+  CALLBACK_URL: process.env.CALLBACK_URL,
 };
