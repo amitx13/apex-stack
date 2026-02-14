@@ -30,7 +30,7 @@ model User {
   referredUsers User[]  @relation("Sponsorship")
 
   // User has multiple accounts (A', A'', A''')
-  accounts UserAccount[]
+  accounts     UserAccount[]
   reentryQueue ReentryQueue[]
 
   // But only ONE set of 3 wallets (shared across all accounts)
@@ -38,7 +38,7 @@ model User {
   payments Payment[]
 
   // All transactions across all accounts feed here
-  walletTransactions WalletTransaction[]
+  walletTransactions  WalletTransaction[]
   serviceTransactions ServiceTransaction[]
 
   // Withdrawal requests
@@ -99,13 +99,13 @@ model UserAccount {
 }
 
 model ReentryQueue {
-  id        String   @id @default(cuid())
+  id        String        @id @default(cuid())
   userId    String
   status    ReentryStatus @default(PENDING)
-  createdAt DateTime @default(now())
-  
+  createdAt DateTime      @default(now())
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   @@unique([userId, status]) // ✅ Prevents duplicate PENDING entries
   @@index([status])
 }
@@ -148,11 +148,10 @@ model WalletTransaction {
 
   serviceTransaction ServiceTransaction?
   // Link to user and wallet
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wallet             Wallet              @relation(fields: [walletId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
-
 
   @@index([userId])
   @@index([walletId])
@@ -207,6 +206,7 @@ enum ServiceType {
   ELECTRICITY
   GAS
   WATER
+  LPG_Booking
 }
 
 enum ServiceStatus {
@@ -218,37 +218,45 @@ enum ServiceStatus {
 
 // New model
 model ServiceTransaction {
-  id              String        @id @default(cuid())
-  userId          String
-  
+  id     String @id @default(cuid())
+  userId String
+
   // Service details
-  serviceType     ServiceType
-  operatorName    String        // "Airtel", "Jio", etc.
-  operatorCode    String        // "AT", "RJ" (skey from IMWallet)
-  amount          Decimal       @db.Decimal(10, 2)
-  
+  serviceType  ServiceType
+  operatorName String // "Airtel", "Jio", etc.
+  operatorCode String // "AT", "RJ" (skey from IMWallet)
+  amount       Decimal     @db.Decimal(10, 2)
+
   // Customer details
-  mobileNumber    String        // Mobile number being recharged
-  
+  mobileNumber String // Mobile number being recharged
+
   // IMWallet tracking
-  orderId         String        @unique  // Your generated order ID
-  imwalletTxnId   String?       @unique  // requestID from IMWallet
-  operatorTxnId   String?                // oprID from IMWallet
-  imwalletResponse Json?                 // Full API response
-  
-  status          ServiceStatus @default(PENDING)
-  commission      Decimal?      @db.Decimal(10, 2)  // gross_comm from IMWallet (your profit)
-  
+  orderId          String  @unique // Your generated order ID
+  imwalletTxnId    String? @unique // requestID from IMWallet
+  operatorTxnId    String? // oprID from IMWallet
+  imwalletResponse Json? // Full API response
+
+  status     ServiceStatus @default(PENDING)
+  commission Decimal?      @db.Decimal(10, 2) // gross_comm from IMWallet (your profit)
+
+  // BBPS-specific fields
+  billFetchId  String? // Valid for 10 mins
+  customerName String? // From fetch bill
+  dueDate      DateTime? // Bill due date
+  billDate     DateTime? // Bill generated date
+  billedAmount Decimal?  @db.Decimal(10, 2) // Original bill amount
+  partPayment  Boolean? // Whether partial payment allowed
+
   // Wallet linkage
-  walletTransactionId String?   @unique
+  walletTransactionId String?            @unique
   walletTransaction   WalletTransaction? @relation(fields: [walletTransactionId], references: [id])
-  
+
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   @@index([userId])
   @@index([orderId])
   @@index([status])
@@ -295,6 +303,7 @@ enum VendorApprovalStatus {
   APPROVED
   REJECTED
 }
+
 model Vendor {
   id       String @id @default(cuid())
   phone    String @unique

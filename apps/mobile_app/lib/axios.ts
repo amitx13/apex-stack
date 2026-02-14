@@ -3,6 +3,7 @@ import { useAuthStore } from '../store/authStore';
 
 // const API_URL = 'http://localhost:3000/api/v1'; // Replace with your backend URL
 const API_URL = 'http://192.168.31.185:3000/api/v1';
+// const API_URL = 'http://139.84.168.181/api/v1';
 
 // Create axios instance
 export const api = axios.create({

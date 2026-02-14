@@ -61,16 +61,19 @@ class RechargeController {
      * Handle callback from IMWallet
      */
     async handleCallback(req: Request, res: Response) {
-        const { orderid, status, oprTID } = req.query;
+        const { orderid, status, oprTID, amount, skey, account } = req.query;
 
         if (!orderid || !status) {
             throw new ApiError(400, 'Missing parameters: orderid or status');
         }
 
         await rechargeService.handleCallback({
-            orderId: orderid as string,
+            oprTID : oprTID as string,
+            orderid: orderid as string,
             status: status as string,
-            oprTID: oprTID as string,
+            amount: amount as string,
+            skey: skey as string,
+            account: account as string,
         });
 
         res.send('OK');

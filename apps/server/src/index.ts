@@ -6,8 +6,11 @@ import { errorHandler } from "./middlewares/errorHandler.js";
 import userRoutes from "./routes/user.routes.js";
 import paymentRoutes from './routes/payment.routes.js'
 import rechargeRoutes from "./routes/recharge.routes.js"
+import bbpsRoutes from  "./routes/bbps.routes.js"
 import { startReentryCron } from "./jobs/reentry-cron.js";
 import { imwalletAPIService } from "./services/imwallet-api.service.js";
+import axios from "axios";
+import { imwalletConfig } from "./config/imwallet.config.js";
 
 dotenv.config();
 
@@ -25,6 +28,7 @@ app.get("/health", (_req, res) => {
 app.use('/api/v1', userRoutes);
 app.use('/api/v1/payment', paymentRoutes); 
 app.use('/api/v1/recharge', rechargeRoutes);
+app.use('/api/v1/bbps', bbpsRoutes)
 
 // Temporary route to check IMWallet balance
 app.get('/api/v1/imwallet/balance', async (_req, res) => {
@@ -60,6 +64,22 @@ app.use(errorHandler);
 //   try {
 //     const balance = await imwalletAPIService.checkBalance();
 //     console.log('✅ IMWallet Balance:', balance);
+//   } catch (error: any) {
+//     console.error('❌ IMWallet Error:', error.message);
+//   }
+// }, 2000);
+
+
+// setTimeout(async () => {
+//   try {
+//     const res = await axios.post('https://partner.imwallet.in/web_services/BBPS/getOperator.jsp',{
+//         webToken: imwalletConfig.webToken,
+//         userCode: imwalletConfig.userCode,
+//         parameters: {
+//             category:'DTH'
+//         }
+//     });
+//     console.log('✅ DTH operators:', res.data);
 //   } catch (error: any) {
 //     console.error('❌ IMWallet Error:', error.message);
 //   }

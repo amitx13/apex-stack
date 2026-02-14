@@ -1,21 +1,26 @@
 import { Text } from '@/components/ui/text';
 import { useAuthStore } from '@/store/authStore';
-import { View, Pressable, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { View, Pressable, ScrollView, ActivityIndicator } from 'react-native';
 import { AntDesign, FontAwesome6, Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { api } from '@/lib/axios';
 import { useRouter } from 'expo-router';
 import { useMessage } from '@/contexts/MessageContext';
 import AllInOneSDKManager from 'paytmpayments-allinone-react-native'
-import { Linking } from 'react-native';
 import { Screen } from '@/components/Screen';
+import { Operator, set } from '@repo/types';
+import { OperatorSelectionModal } from '@/components/OperatorSelectionModal';
 
 export default function HomeScreen() {
   const router = useRouter();
   const { user, logout, fetchUserDetails, isLoading } = useAuthStore();
   const [isPaymentLoading, serIsPaymentLoading] = useState<boolean>(false)
   const [isGasVerifying, serIsGasVerifying] = useState<boolean>(false)
+
+  const [showOperatorModal, setShowOperatorModal] = useState<boolean>(false);
+  const [isOperatorsLoading, setIsOperatorsLoading] = useState<boolean>(false);
+  const [operators, setOperators] = useState<Operator[] | null>(null)
   // const router = useRouter();
   const { showSuccess, showError, showWarning, showInfo, showMessage } = useMessage();
 
@@ -171,20 +176,50 @@ export default function HomeScreen() {
     }
   };
 
-
   const handleVerification = () => {
     console.log(user)
   }
 
-  console.log(user)
+  // console.log(user)
 
   const initiateMobileRecharge = async () => {
-    console.log("mobile recharge")
     if (!user?.isActive) {
       showWarning('Account Inactive', 'Please activate your account to access this feature.');
       return;
     }
-  }
+    setIsOperatorsLoading(true);
+    try {
+      const response = await api.get('/recharge/operators/mobile');
+      setOperators(response.data.data);
+      setShowOperatorModal(true); // Open modal after fetching
+    } catch (error: any) {
+      showError('Error', 'Failed to load operators. Please try again.');
+      console.error('❌ Operator fetch error:', error.message || error);
+    } finally {
+      setIsOperatorsLoading(false);
+    }
+  };
+
+  const handleOperatorSelected = async (mobileNumber: string, operator: Operator) => {
+    try {
+      // TODO: Fetch plans from backend
+      // Navigate to plans screen with data
+      router.push({
+        pathname: '/(app)/recharge-plans',
+        params: {
+          mobileNumber,
+          operatorName: operator.name,
+          operatorCode: operator.code,
+        },
+      });
+      setShowOperatorModal(false);
+    } catch (error: any) {
+      showError('Error', 'Failed to load plans. Please try again.');
+    }finally{
+      setShowOperatorModal(false);
+      setOperators(null);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -203,7 +238,7 @@ export default function HomeScreen() {
           colors={['rgba(0, 173, 181, 0.15)', 'rgba(34, 40, 49, 0)']}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
-          className="pt-6 pb-6 px-6"
+          className="pt-6 pb-6 px-4"
         >
           <View className="flex-row items-center justify-between">
             {/* Left: User Avatar + Info */}
@@ -280,51 +315,53 @@ export default function HomeScreen() {
 
         {/* Main Content */}
         <ScrollView
-          className="flex-1 px-6"
+          className="flex-1 px-4"
           showsVerticalScrollIndicator={false}
           contentContainerClassName="pb-28"
         >
           {/* Activation Banner or Stats Cards */}
           {!user?.isActive ? (
             <>
-              <View className="mb-6">
-                <View className="bg-orange-500/10 rounded-2xl p-4 border border-orange-500/30">
-                  <View className="flex-row items-center gap-3 mb-3">
-                    <View className="w-10 h-10 bg-orange-500/20 rounded-xl items-center justify-center">
-                      <Ionicons name="flame" size={20} color="#F97316" />
-                    </View>
-                    <View className="flex-1">
-                      <Text className="text-foreground text-sm font-bold mb-0.5">
-                        Gas Consumer Verification
-                      </Text>
-                      <Text className="text-muted-foreground text-[11px]">
-                        Verify your gas connection details
-                      </Text>
-                    </View>
-                  </View>
-
-                  <Pressable
-                    className="rounded-xl overflow-hidden active:opacity-90"
-                    onPress={handleVerification}
-                    disabled={isGasVerifying}
-                  >
-                    <LinearGradient
-                      colors={['#F97316', '#EA580C']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      className="py-2.5 items-center"
-                    >
-                      {isGasVerifying ? (
-                        <ActivityIndicator size="small" color="white" />
-                      ) : (
-                        <Text className="text-white font-bold text-sm">
-                          Verify Consumer Number
+              {!user?.isGasConsumerVerified &&
+                <View className="mb-6">
+                  <View className="bg-orange-500/10 rounded-2xl p-4 border border-orange-500/30">
+                    <View className="flex-row items-center gap-3 mb-3">
+                      <View className="w-10 h-10 bg-orange-500/20 rounded-xl items-center justify-center">
+                        <Ionicons name="flame" size={20} color="#F97316" />
+                      </View>
+                      <View className="flex-1">
+                        <Text className="text-foreground text-sm font-bold mb-0.5">
+                          Gas Consumer Verification
                         </Text>
-                      )}
-                    </LinearGradient>
-                  </Pressable>
+                        <Text className="text-muted-foreground text-[11px]">
+                          Verify your gas connection details
+                        </Text>
+                      </View>
+                    </View>
+
+                    <Pressable
+                      className="rounded-xl overflow-hidden active:opacity-90"
+                      onPress={handleVerification}
+                      disabled={isGasVerifying}
+                    >
+                      <LinearGradient
+                        colors={['#F97316', '#EA580C']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        className="py-2.5 items-center"
+                      >
+                        {isGasVerifying ? (
+                          <ActivityIndicator size="small" color="white" />
+                        ) : (
+                          <Text className="text-white font-bold text-sm">
+                            Verify Consumer Number
+                          </Text>
+                        )}
+                      </LinearGradient>
+                    </Pressable>
+                  </View>
                 </View>
-              </View>
+              }
               <View className="mb-6">
                 <View className="bg-red-500/10 rounded-2xl p-4 border border-red-500/30">
                   <View className="flex-row items-center gap-3 mb-3">
@@ -426,12 +463,14 @@ export default function HomeScreen() {
                 onPress={initiateMobileRecharge}
                 className="bg-card/50 rounded-xl py-4 items-center active:scale-95"
                 style={{ width: '31.5%' }}
+                disabled={isOperatorsLoading}
               >
                 <View className="w-11 h-11 bg-green-500/10 rounded-xl items-center justify-center mb-1.5">
-                  <Ionicons name="phone-portrait-outline" size={24} color="#10B981" />
+                  {isOperatorsLoading ? <ActivityIndicator size="small" color="#10B981" /> :
+                    <Ionicons name="phone-portrait-outline" size={24} color="#10B981" />}
                 </View>
                 <Text className="text-foreground text-[11px] font-medium">
-                  Mobile
+                  Mobile recharge
                 </Text>
               </Pressable>
 
@@ -583,6 +622,12 @@ export default function HomeScreen() {
           </Pressable>
         </ScrollView >
       </View >
+      <OperatorSelectionModal
+        visible={showOperatorModal}
+        operators={operators}
+        onClose={() => setShowOperatorModal(false)}
+        onProceed={handleOperatorSelected}
+      />
     </Screen>
   );
 }

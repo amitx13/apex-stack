@@ -261,8 +261,8 @@ export const fetchMe = async (req: Request, res: Response) => {
             isRegistrationPayment: user.isRegistrationPayment,
             isGasConsumerVerified: user.isGasConsumerVerified,
             membersCount: user._count.referredUsers,
-            spendBalance: spendWallet ? spendWallet.balance.toString() : null,
-            withdrawalBalance: withdrawalWallet ? withdrawalWallet.balance.toString() : null
+            spendBalance: spendWallet ? spendWallet.balance : 0,
+            withdrawalBalance: withdrawalWallet ? withdrawalWallet.balance : 0,
         },
     });
 }

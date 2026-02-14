@@ -11,10 +11,20 @@ export interface User {
   phone: string;
   role: Role;
   gasConsumerNumber: string;
+  isRegistrationPayment: boolean;
+  isGasConsumerVerified: boolean;
   membersCount: number;
-  spendBalance: string | null;
-  withdrawalBalance: string | null
+  spendBalance: number;
+  withdrawalBalance: number
 }
+
+export interface Operator {
+  code: string;
+  name: string;
+  icons: string
+  service: string;
+}
+
 
 export type ApiResponse<T> = {
   success: boolean

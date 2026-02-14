@@ -70,7 +70,7 @@ class RechargeService {
         // 5. Generate order ID
         const orderId = this.generateOrderId();
 
-        // 6. Create transaction record (PENDING status)
+        // 6. Create transaction record (PENDING status) - NO WALLET DEDUCTION YET
         const transaction = await prisma.serviceTransaction.create({
             data: {
                 userId,
@@ -84,27 +84,13 @@ class RechargeService {
             },
         });
 
+        let imwalletResponse;
+
         try {
-            // 7. Deduct from SPEND wallet
-            const walletTxnId = await deductFromWallet(
-                userId,
-                'SPEND',
-                new Decimal(amount),
-                `Mobile recharge - ${operator.name} - ${mobileNumber}`,
-                'RECHARGE',
-                transaction.id
-            );
-
-            // 8. Link wallet transaction
-            await prisma.serviceTransaction.update({
-                where: { id: transaction.id },
-                data: { walletTransactionId: walletTxnId },
-            });
-
-            // 9. Call IMWallet API
+            // 7. Call IMWallet API (wallet NOT deducted yet)
             const callbackUrl = `${process.env.BACKEND_URL}/api/v1/recharge/callback`;
 
-            const imwalletResponse = await imwalletAPIService.processMobileRecharge({
+            imwalletResponse = await imwalletAPIService.processMobileRecharge({
                 orderId,
                 operatorCode: operator.code,
                 mobileNumber,
@@ -112,11 +98,10 @@ class RechargeService {
                 callbackUrl,
             });
 
-            // 10. Update transaction based on response
-            const updatedTransaction = await prisma.serviceTransaction.update({
+            // 8. Store API response immediately
+            await prisma.serviceTransaction.update({
                 where: { id: transaction.id },
                 data: {
-                    status: imwalletResponse.status as any,
                     imwalletTxnId: imwalletResponse.requestID,
                     operatorTxnId: imwalletResponse.oprID,
                     commission: imwalletResponse.gross_comm
@@ -126,95 +111,141 @@ class RechargeService {
                 },
             });
 
-            // 11. If failed immediately, refund wallet
-            if (imwalletResponse.status === 'FAILED') {
-                await creditToSpendWallet(
+        } catch (error: any) {
+            await prisma.serviceTransaction.update({
+                where: { id: transaction.id },
+                data: {
+                    status: 'FAILED',
+                    imwalletResponse: { error: error.message } as any,
+                },
+            });
+
+            throw new ApiError(500, 'Failed to connect to recharge service. Please try again.');
+        }
+
+        // 9. Handle IMWallet response status
+        const normalizedStatus = imwalletResponse.status.toUpperCase();
+
+        // 🔴 FAILED cases
+        if (['FAILED', 'FAIL', 'FAILURE'].includes(normalizedStatus)) {
+            await prisma.serviceTransaction.update({
+                where: { id: transaction.id },
+                data: { status: 'FAILED' },
+            });
+
+            throw new ApiError(
+                400,
+                `Recharge failed: ${imwalletResponse.msg || 'Unknown error'}`
+            );
+        }
+
+        if (normalizedStatus === 'SUCCESS' || normalizedStatus === 'PENDING') {
+
+            const result = await prisma.$transaction(async (tx) => {
+
+                const walletTxnId = await deductFromWallet(
                     userId,
                     'SPEND',
                     new Decimal(amount),
-                    `Refund - ${imwalletResponse.msg}`,
-                    'RECHARGE_REFUND',
+                    `Mobile recharge (${normalizedStatus}) - ${operator.name} - ${mobileNumber}`,
+                    'RECHARGE',
                     transaction.id,
+                    tx
                 );
-            }
+
+                const updatedTransaction = await tx.serviceTransaction.update({
+                    where: { id: transaction.id },
+                    data: {
+                        status: normalizedStatus,
+                        walletTransactionId: walletTxnId,
+                    },
+                });
+
+                return { updatedTransaction };
+            });
 
             return {
-                success: imwalletResponse.status === 'SUCCESS',
-                transaction: updatedTransaction,
-                message: imwalletResponse.msg,
-                status: imwalletResponse.status,
+                success: true,
+                transaction: result.updatedTransaction,
+                message: imwalletResponse.msg || (normalizedStatus === 'SUCCESS' ? 'Recharge successful' : 'Recharge is being processed. You will be notified once completed.'),
+                status: normalizedStatus,
             };
-        } catch (error: any) {
-            // Refund on any error
-            await creditToSpendWallet(
-                userId,
-                'SPEND',
-                new Decimal(amount),
-                `Refund - System error`,
-                'RECHARGE_REFUND',
-                transaction.id,
-            );
+        }
+        // Unknown status
+        throw new ApiError(500, `Unexpected status from recharge service: ${imwalletResponse.status}`);
+    }
+
+    /**
+     * Handle callback from IMWallet (for PENDING transactions)
+     */
+    async handleCallback(callbackData: {
+        oprTID: string;
+        orderid: string;
+        account: string;
+        amount: string;
+        skey: string;
+        status: string;
+    }) {
+        const { orderid, status, oprTID } = callbackData;
+        const normalizedStatus = status.toUpperCase();
+
+        // Find transaction
+        const transaction = await prisma.serviceTransaction.findUnique({
+            where: { orderId: orderid },
+        });
+
+        if (!transaction) {
+            console.error('❌ Callback for unknown order:', orderid);
+            return { success: false, message: 'Order not found' };
+        }
+
+        // Only process if currently PENDING
+        if (transaction.status !== 'PENDING') {
+            console.log('⚠️ Callback for non-pending transaction:', {
+                orderId: orderid,
+                currentStatus: transaction.status,
+                callbackStatus: status,
+            });
+            return { success: true, message: 'Already processed' };
+        }
+
+        // 🟢 SUCCESS
+        if (normalizedStatus === 'SUCCESS') {
+            // Wallet already deducted when status was PENDING
+            await prisma.serviceTransaction.update({
+                where: { id: transaction.id },
+                data: {
+                    status: 'SUCCESS',
+                    operatorTxnId: oprTID,
+                },
+            });
+
+            return { success: true, message: 'Transaction marked as success' };
+        }
+
+        // 🔴 FAILED
+        if (['FAILED', 'FAIL', 'FAILURE'].includes(normalizedStatus)) {
+            // Refund the deducted amount
+            if (transaction.walletTransactionId) {
+                await creditToSpendWallet(
+                    transaction.userId,
+                    'SPEND',
+                    transaction.amount,
+                    `Refund - Recharge failed (${status})`,
+                    'RECHARGE_REFUND',
+                    transaction.id
+                );
+            }
 
             await prisma.serviceTransaction.update({
                 where: { id: transaction.id },
                 data: { status: 'FAILED' },
             });
 
-            if(error?.message){
-                console.log("Error during recharge process:", error.message)
-            }
-
-            throw new ApiError(500, 'Failed to process recharge. Amount has been refunded.');
-        }
-    }
-
-    /**
-     * Handle callback from IMWallet (for PENDING transactions)
-     */
-    async handleCallback(params: {
-        orderId: string;
-        status: string;
-        oprTID?: string;
-    }) {
-        const { orderId, status, oprTID } = params;
-
-        const transaction = await prisma.serviceTransaction.findUnique({
-            where: { orderId },
-        });
-
-        if (!transaction) {
-            throw new ApiError(404, 'Transaction not found');
+            return { success: true, message: 'Transaction failed and refunded' };
         }
 
-        // Normalize status (FAIL/FAILURE/FAILED → FAILED)
-        let normalizedStatus: 'SUCCESS' | 'FAILED' | 'PENDING' = 'PENDING';
-        if (status === 'SUCCESS') normalizedStatus = 'SUCCESS';
-        if (['FAIL', 'FAILURE', 'FAILED'].includes(status.toUpperCase())) {
-            normalizedStatus = 'FAILED';
-        }
-
-        // Update transaction
-        await prisma.serviceTransaction.update({
-            where: { id: transaction.id },
-            data: {
-                status: normalizedStatus,
-                operatorTxnId: oprTID,
-            },
-        });
-
-        // Refund if failed
-        if (normalizedStatus === 'FAILED') {
-            await creditToSpendWallet(
-                transaction.userId,
-                'SPEND',
-                transaction.amount,
-                `Refund - Transaction failed`,
-                'RECHARGE_REFUND',
-                transaction.id,
-            );
-        }
-
-        return { success: true };
+        return { success: false, message: 'Unknown status' };
     }
 
     /**

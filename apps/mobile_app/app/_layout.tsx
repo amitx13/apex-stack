@@ -111,6 +111,7 @@ export default function RootLayout() {
               backgroundColor: CustomTheme.colors.background,
             }}
             edges={['top', 'bottom']}
+            // className='px-6'
           >
             <MessageProvider>
               <StatusBar

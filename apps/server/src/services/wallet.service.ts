@@ -227,10 +227,14 @@ export async function deductFromWallet(
   points: number | Decimal,
   description: string,
   referenceType?: string,
-  referenceId?: string
+  referenceId?: string,
+  tx?: any  // Accept optional external transaction
 ): Promise<string> {
-  const trxnId = await prisma.$transaction(async (tx) => {
-    const wallet = await tx.wallet.update({
+  const prismaClient = tx || prisma;  // Use passed transaction or global prisma
+
+  // If external transaction provided, use it directly (NO nested $transaction)
+  if (tx) {
+    const wallet = await prismaClient.wallet.update({
       where: {
         userId_type: {
           userId,
@@ -242,7 +246,7 @@ export async function deductFromWallet(
       },
     });
 
-    const trxn = await tx.walletTransaction.create({
+    const trxn = await prismaClient.walletTransaction.create({
       data: {
         userId,
         walletId: wallet.id,
@@ -253,23 +257,57 @@ export async function deductFromWallet(
         referenceId,
       },
     });
-    return trxn.id
+
+    console.log(`✅ Deducted ${points} points from ${walletType} wallet`);
+    return trxn.id;
+  }
+
+  // No external transaction, create our own
+  const trxnId = await prisma.$transaction(async (newTx) => {
+    const wallet = await newTx.wallet.update({
+      where: {
+        userId_type: {
+          userId,
+          type: walletType,
+        },
+      },
+      data: {
+        balance: { decrement: points },
+      },
+    });
+
+    const trxn = await newTx.walletTransaction.create({
+      data: {
+        userId,
+        walletId: wallet.id,
+        type: 'DEBIT',
+        points: new Decimal(points),
+        description,
+        referenceType,
+        referenceId,
+      },
+    });
+
+    return trxn.id;
   });
 
   console.log(`✅ Deducted ${points} points from ${walletType} wallet`);
   return trxnId;
 }
 
-export const creditToSpendWallet = async (
+export async function creditToSpendWallet(
   userId: string,
   walletType: WalletType,
   points: number | Decimal,
   description: string,
   referenceType?: string,
-  referenceId?: string
-) => {
-  await prisma.$transaction(async (tx) => {
-    const spendWallet = await tx.wallet.update({
+  referenceId?: string,
+  tx?: any
+): Promise<string> {
+  const prismaClient = tx || prisma;
+
+  if (tx) {
+    const wallet = await prismaClient.wallet.update({
       where: {
         userId_type: {
           userId,
@@ -281,16 +319,50 @@ export const creditToSpendWallet = async (
       },
     });
 
-    await tx.walletTransaction.create({
+    const trxn = await prismaClient.walletTransaction.create({
       data: {
         userId,
-        walletId: spendWallet.id,
+        walletId: wallet.id,
         type: 'CREDIT',
         points: new Decimal(points),
-        description: `${description} (${walletType} ${points} points)`,
+        description,
         referenceType,
         referenceId,
       },
     });
-  })
+
+    console.log(`✅ Credited ${points} points to ${walletType} wallet`);
+    return trxn.id;
+  }
+
+  const trxnId = await prisma.$transaction(async (newTx) => {
+    const wallet = await newTx.wallet.update({
+      where: {
+        userId_type: {
+          userId,
+          type: walletType,
+        },
+      },
+      data: {
+        balance: { increment: points },
+      },
+    });
+
+    const trxn = await newTx.walletTransaction.create({
+      data: {
+        userId,
+        walletId: wallet.id,
+        type: 'CREDIT',
+        points: new Decimal(points),
+        description,
+        referenceType,
+        referenceId,
+      },
+    });
+
+    return trxn.id;
+  });
+
+  console.log(`✅ Credited ${points} points to ${walletType} wallet`);
+  return trxnId;
 }

@@ -9,7 +9,7 @@ import { TAB_BAR_HEIGHT } from "./CustomTabBar";
 
 export function Screen({ 
   children,
-  hasTabBar = true // ✅ Add this prop
+  hasTabBar = true
 }: { 
   children: React.ReactNode;
   hasTabBar?: boolean;

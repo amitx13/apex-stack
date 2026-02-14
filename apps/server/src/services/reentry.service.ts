@@ -117,7 +117,7 @@ async function processSingleReentry(queueId: string, userName: string): Promise<
     });
 
     if (!wallet) {
-      console.log(`   ❌ INCENTIVE wallet not found`);
+      console.log(`❌ INCENTIVE wallet not found`);
       await tx.reentryQueue.update({
         where: { id: queueId },
         data: { status: 'PROCESSED' },
@@ -146,7 +146,8 @@ async function processSingleReentry(queueId: string, userName: string): Promise<
       REENTRY_THRESHOLD,
       'Auto re-entry deduction',
       'REENTRY',
-      queueId
+      queueId,
+      tx
     );
 
     // 2. Find next available position in matrix
