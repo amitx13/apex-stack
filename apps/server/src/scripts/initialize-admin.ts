@@ -1,6 +1,5 @@
 // apps/server/src/scripts/initialize-admin.ts
 
-import bcrypt from 'bcrypt';
 import { createAdminWallet } from '../services/wallet.service';
 import { prisma } from '@repo/db';
 
@@ -30,7 +29,7 @@ export async function initializeAdmin() {
         isActive: true,
         isGasConsumerVerified: true,
         isRegistrationPayment: true,
-        password: await bcrypt.hash(adminPassword, 10),
+        password: adminPassword,
       },
     });
 

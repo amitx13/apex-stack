@@ -215,11 +215,24 @@ export default function HomeScreen() {
       setShowOperatorModal(false);
     } catch (error: any) {
       showError('Error', 'Failed to load plans. Please try again.');
-    }finally{
+    } finally {
       setShowOperatorModal(false);
       setOperators(null);
     }
   };
+
+  const handleBBPSOperatorSelected = async (service: string) => {
+    if (!user?.isActive) {
+      showWarning('Account Inactive', 'Please activate your account to access this feature.');
+      return;
+    }
+    router.push({
+      pathname: '/(app)/bbps-operators',
+      params: {
+        service,
+      },
+    });
+  }
 
   if (isLoading) {
     return (
@@ -476,14 +489,7 @@ export default function HomeScreen() {
 
               {/* DTH Recharge */}
               <Pressable
-                onPress={() => {
-                  if (!user?.isActive) {
-                    showWarning('Account Inactive', 'Please activate your account to access this feature.');
-                    return;
-                  }
-                  // TODO: Navigate to DTH recharge
-                  console.log('DTH Recharge');
-                }}
+                onPress={() => handleBBPSOperatorSelected('DTH')}
                 className="bg-card/50 rounded-xl py-4 items-center active:scale-95"
                 style={{ width: '31.5%' }}
               >
@@ -497,14 +503,7 @@ export default function HomeScreen() {
 
               {/* Book Gas */}
               <Pressable
-                onPress={() => {
-                  if (!user?.isActive) {
-                    showWarning('Account Inactive', 'Please activate your account to access this feature.');
-                    return;
-                  }
-                  // TODO: Navigate to gas booking
-                  console.log('Book Gas');
-                }}
+                onPress={() => handleBBPSOperatorSelected('LPG Booking')}
                 className="bg-card/50 rounded-xl py-4 items-center active:scale-95"
                 style={{ width: '31.5%' }}
               >
@@ -518,14 +517,7 @@ export default function HomeScreen() {
 
               {/* Gas Bill */}
               <Pressable
-                onPress={() => {
-                  if (!user?.isActive) {
-                    showWarning('Account Inactive', 'Please activate your account to access this feature.');
-                    return;
-                  }
-                  // TODO: Navigate to gas bill payment
-                  console.log('Gas Bill');
-                }}
+                onPress={() => handleBBPSOperatorSelected('Gas')}
                 className="bg-card/50 rounded-xl py-4 items-center active:scale-95"
                 style={{ width: '31.5%' }}
               >
@@ -539,14 +531,7 @@ export default function HomeScreen() {
 
               {/* Electricity Bill */}
               <Pressable
-                onPress={() => {
-                  if (!user?.isActive) {
-                    showWarning('Account Inactive', 'Please activate your account to access this feature.');
-                    return;
-                  }
-                  // TODO: Navigate to electricity bill payment
-                  console.log('Electricity Bill');
-                }}
+                onPress={() => handleBBPSOperatorSelected('Electricity')}
                 className="bg-card/50 rounded-xl py-4 items-center active:scale-95"
                 style={{ width: '31.5%' }}
               >
@@ -560,14 +545,7 @@ export default function HomeScreen() {
 
               {/* Water Bill */}
               <Pressable
-                onPress={() => {
-                  if (!user?.isActive) {
-                    showWarning('Account Inactive', 'Please activate your account to access this feature.');
-                    return;
-                  }
-                  // TODO: Navigate to water bill payment
-                  console.log('Water Bill');
-                }}
+                onPress={() => handleBBPSOperatorSelected('Water')}
                 className="bg-card/50 rounded-xl py-4 items-center active:scale-95"
                 style={{ width: '31.5%' }}
               >
