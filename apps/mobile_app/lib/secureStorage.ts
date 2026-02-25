@@ -1,3 +1,4 @@
+import { AppUser } from '@repo/types';
 import * as SecureStore from 'expo-secure-store';
 
 const TOKEN_KEY = 'auth_token';
@@ -34,7 +35,7 @@ export const secureStorage = {
   },
 
   // Save user data to SecureStore
-  async saveUser(user: any): Promise<void> {
+  async saveUser(user: AppUser): Promise<void> {
     try {
       await SecureStore.setItemAsync(USER_KEY, JSON.stringify(user));
     } catch (error) {

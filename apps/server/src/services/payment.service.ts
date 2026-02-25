@@ -18,7 +18,6 @@ class PaymentService {
         id: true,
         name: true,
         phone: true,
-        isGasConsumerVerified: true,
         isRegistrationPayment: true,
       }
     });
@@ -26,10 +25,6 @@ class PaymentService {
     if (!user) {
       throw new ApiError(404, 'User not found');
     }
-
-    // if (!user.isGasConsumerVerified) {
-    //   throw new ApiError(403, 'Gas consumer number not verified');
-    // }
 
     if (user.isRegistrationPayment) {
       throw new ApiError(400, 'Registration payment already completed');

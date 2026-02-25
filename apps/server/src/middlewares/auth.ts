@@ -9,68 +9,80 @@ declare global {
     interface Request {
       user?: {
         userId: string;
-        gasConsumerNumber: string;
+        role: "USER" | "VENDOR" | "ADMIN";
       };
     }
   }
 }
 
 export const authMiddleware = async (
-  req: Request, 
-  _res: Response, 
+  req: Request,
+  _res: Response,
   next: NextFunction
 ) => {
   try {
     // Get token from header (matches your interceptor)
     const authHeader = req.headers.authorization;
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       throw new ApiError(401, "No token provided");
     }
-    
+
     // Extract token (matches "Bearer <token>" format from your interceptor)
     const token = authHeader.split(' ')[1];
-    
+
     // Verify token
     const decoded = jwt.verify(
-      token, 
+      token,
       process.env.JWT_SECRET!
-    ) as { userId: string; gas: string };
-    
-    // Check if user exists
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-      select: { 
-        id: true, 
-        gasConsumerNumber: true,
-        isActive: true 
-      }
-    });
-    
-    if (!user) {
-      throw new ApiError(401, "User not found");
+    ) as { userId: string; role: 'USER' | 'VENDOR' };
+
+    let userExists;
+
+    if (decoded.role === 'USER') {
+      userExists = await prisma.user.findUnique({
+        where: { id: decoded.userId },
+        select: {
+          id: true,
+          role: true,
+        }
+      });
+    } else if (decoded.role === 'VENDOR') {
+      userExists = await prisma.vendor.findUnique({
+        where: { id: decoded.userId },
+        select: {
+          id: true,
+          role: true,
+        }
+      });
+    } else {
+      throw new ApiError(401, "Invalid role in token");
     }
-    
-    // Attach user to request
+
+    if (!userExists) {
+      throw new ApiError(401, "User does not exist");
+    }
+
     req.user = {
-      userId: user.id,
-      gasConsumerNumber: user.gasConsumerNumber,
+      userId: userExists.id,
+      role: userExists.role,
     };
-    
+
     next();
-  } catch (error: any) {
+  }
+  catch (error: any) {
     if (error instanceof ApiError) {
       throw error;
     }
-    
+
     if (error.name === 'JsonWebTokenError') {
       throw new ApiError(401, "Invalid token");
     }
-    
+
     if (error.name === 'TokenExpiredError') {
       throw new ApiError(401, "Token expired");
     }
-    
+
     throw new ApiError(500, "Authentication failed");
   }
 };

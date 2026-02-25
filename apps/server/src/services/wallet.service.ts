@@ -1,6 +1,6 @@
 // apps/server/src/services/wallet.service.ts
 
-import { prisma, WalletType } from '@repo/db';
+import { prisma, ReferenceType, WalletType } from '@repo/db';
 import { splitPointsToWallets } from '../utils/calculation.helpers';
 import { MLM_CONFIG } from '../config/mlm.constants';
 import { Prisma } from "@repo/db";
@@ -48,8 +48,8 @@ export async function distributeTo3Wallets(
   userId: string,
   totalPoints: number | Decimal,
   description: string,
-  referenceType?: string,
-  referenceId?: string
+  referenceType: ReferenceType,
+  referenceId: string
 ) {
   const split = splitPointsToWallets(totalPoints);
 
@@ -166,8 +166,8 @@ export async function addToAdminWallet(
   adminId: string,
   points: number | Decimal,
   description: string,
-  referenceType?: string,
-  referenceId?: string
+  referenceType: ReferenceType,
+  referenceId: string
 ) {
   await prisma.$transaction(async (tx) => {
     const adminWallet = await tx.wallet.update({
@@ -226,8 +226,8 @@ export async function deductFromWallet(
   walletType: WalletType,
   points: number | Decimal,
   description: string,
-  referenceType?: string,
-  referenceId?: string,
+  referenceType: ReferenceType,
+  referenceId: string,
   tx?: any  // Accept optional external transaction
 ): Promise<string> {
   const prismaClient = tx || prisma;  // Use passed transaction or global prisma
@@ -300,8 +300,8 @@ export async function creditToSpendWallet(
   walletType: WalletType,
   points: number | Decimal,
   description: string,
-  referenceType?: string,
-  referenceId?: string,
+  referenceType: ReferenceType,
+  referenceId: string,
   tx?: any
 ): Promise<string> {
   const prismaClient = tx || prisma;

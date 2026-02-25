@@ -1,63 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import { imwalletConfig } from '../config/imwallet.config';
 import { ApiError } from '../utils/ApiError';
-
-interface BBPSOperator {
-  spkey: string;
-  operator: string;
-  service: string;
-  state: string;
-  getBill: 'Required' | 'Not Required';
-  name: string;
-  bbps_status: string;
-  ad1: string;
-  ad2: string;
-  ad3: string;
-  P2P_P2A: 'P2P' | 'P2A';
-}
-
-interface FetchBillResponse {
-  status: 'SUCCESS' | 'FAILED';
-  data?: {
-    billFetchId: string;
-    billedamount: string;
-    dueDate: string;
-    billdate: string;
-    partPayment: boolean;
-    payamount: string;
-    acceptPayment: boolean;
-    customerName: string;
-  };
-  msg?: string;
-  requestID?: string;
-}
-
-interface PayBillResponse {
-  status: 'SUCCESS' | 'FAILED' | 'PENDING' | 'FAIL' | 'FAILURE';
-  msg: string;
-  orderid: string;
-  imwtid?: string;
-  oprID?: string;
-  amount?: string;
-  bal?: number;
-  gross_comm?: number;
-  account?: string;
-  opr_type?: 'P2A' | 'P2P';
-}
-
-interface BBPSStatusResponse {
-  status: 'SUCCESS' | 'FAILED' | 'PENDING' | null;
-  msg: string;
-  data?: {
-    serivce: string;
-    amount: string;
-    imwtid: string;
-    oper_tid: string;
-    operator: string;
-    account: string;
-  };
-  requestID?: string;
-}
+import { BBPSOperator, BBPSStatusResponse, FetchBillResponse, PayBillResponse } from '@repo/types';
 
 class IMWalletAPIService {
   private axiosInstance: AxiosInstance;
@@ -180,8 +124,8 @@ class IMWalletAPIService {
     }
   }
 
-  
-// ==================== BBPS APIs ====================
+
+  // ==================== BBPS APIs ====================
 
   /**
    * Get BBPS operators by category
@@ -215,7 +159,7 @@ class IMWalletAPIService {
    * Get extra parameters for specific operators (Jharkhand Bijli, Hero FinCorp, HPCL)
    * Allowed spkey: 267, 197, 282
    */
-  async getBBPSExtraParams(spkey: string): Promise<{
+  async getBBPSExtraParams(spkey: number): Promise<{
     status: 'SUCCESS' | 'FAILED';
     data?: any[];
     msg?: string;
@@ -227,9 +171,17 @@ class IMWalletAPIService {
         parameters: { spkey },
       };
 
+      const formData = new URLSearchParams();
+      formData.append('data', JSON.stringify(payload));
+
       const response = await this.axiosInstance.post(
         '/BBPS/getExtraParam.jsp',
-        `data=${JSON.stringify(payload)}`
+        formData,
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        }
       );
 
       return response.data;
@@ -255,13 +207,13 @@ class IMWalletAPIService {
         webToken: imwalletConfig.webToken,
         userCode: imwalletConfig.userCode,
         parameters: {
-          account: params.account,
-          spkey: params.spkey,
-          cust_mbl: params.cust_mbl,
-          ad1: params.ad1 || '',
-          ad2: params.ad2 || '',
-          ad3: params.ad3 || '',
-        },
+          account: params.account.trim(),
+          spkey: params.spkey.trim(),
+          cust_mbl: params.cust_mbl.trim(),
+          ad1: params.ad1?.trim() || 'NA',
+          ad2: params.ad2?.trim() || 'NA',
+          ad3: params.ad3?.trim() || 'NA',
+        }
       };
 
       console.log('📡 Fetching BBPS bill:', { account: params.account, spkey: params.spkey });

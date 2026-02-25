@@ -12,6 +12,82 @@ enum Role {
   USER
 }
 
+enum PaymentType {
+  REGISTRATION
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum WalletType {
+  SPEND
+  INCENTIVE
+  WITHDRAWAL
+}
+
+enum TransactionType {
+  CREDIT
+  DEBIT
+}
+
+enum WithdrawalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+enum ServiceType {
+  MOBILE_PREPAID
+  DTH
+  ELECTRICITY
+  GAS
+  WATER
+  LPG_Booking
+}
+
+enum ServiceStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum EntryType {
+  REGISTRATION
+  REENTRY
+}
+
+enum ReentryStatus {
+  PENDING
+  PROCESSED
+}
+
+enum VendorRole {
+  VENDOR
+}
+
+enum VendorApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum AccountType {
+  SAVINGS
+  CURRENT
+}
+
+enum BillRequestStatus {
+  PENDING
+  COMPLETED
+  REJECTED
+}
+
 model User {
   id                    String      @id @default(cuid())
   name                  String
@@ -20,7 +96,6 @@ model User {
   gasConsumerNumber     String      @unique
   role                  Role        @default(USER)
   isRegistrationPayment Boolean     @default(false)
-  isGasConsumerVerified Boolean     @default(false)
   isActive              Boolean     @default(false)
   password              String
   bankDetails           BankDetail?
@@ -40,9 +115,14 @@ model User {
   // All transactions across all accounts feed here
   walletTransactions  WalletTransaction[]
   serviceTransactions ServiceTransaction[]
+  vendorTransactions  VendorTransaction[]
 
   // Withdrawal requests
   withdrawalRequests WithdrawalRequest[]
+  billRequests       BillRequest[]
+
+  autoPays          AutoPay[]
+  autoPayExecutions AutoPayExecution[]
 
   vendors Vendor[] @relation("vendorSponsor")
 
@@ -53,24 +133,20 @@ model User {
 }
 
 model BankDetail {
-  id            String   @id @default(cuid())
-  userId        String   @unique
+  id            String      @id @default(cuid())
+  userId        String      @unique
   bankName      String
   accountNumber String
+  accountType   AccountType @default(SAVINGS)
   ifscCode      String
   upiId         String?
   qrCode        String?
   gPay          String?
-  createdAt     DateTime @default(now())
+  createdAt     DateTime    @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("bank_details")
-}
-
-enum EntryType {
-  REGISTRATION // Initial ₹199 payment
-  REENTRY // 163 points deducted from Incentive wallet
 }
 
 model UserAccount {
@@ -110,11 +186,6 @@ model ReentryQueue {
   @@index([status])
 }
 
-enum ReentryStatus {
-  PENDING
-  PROCESSED
-}
-
 model Wallet {
   id      String     @id @default(cuid())
   userId  String
@@ -134,6 +205,50 @@ model Wallet {
   @@unique([userId, type])
 }
 
+model BillRequest {
+  id     String @id @default(cuid())
+  userId String
+
+  amount     Decimal @db.Decimal(15, 2) // ₹100 — what user paid outside
+  charge     Decimal @db.Decimal(15, 2) // ₹10  — 10% system fee
+  totalDebit Decimal @db.Decimal(15, 2) // ₹110 — debited from spend wallet
+
+  billImageUrl String? // uploaded screenshot
+  description  String? // optional note e.g. "Petrol - HP Pump"
+  category     String? // PETROL, GROCERY, FOOD etc
+
+  status BillRequestStatus @default(PENDING)
+
+  // wallet transaction linkage for audit
+  walletTransactionId String? @unique
+
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  walletTransaction WalletTransaction? @relation(fields: [walletTransactionId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+enum ReferenceType {
+  REGISTRATION /* userAccount Id */
+  REENTRY /* newly created UserAccount Id  */
+  REENTRY_DEBIT /* noo need to show any name since it's a debit trxn for re-entry */
+  VENDOR_COMMISSION /* vendorId */
+  USER_COMMISSION /* userId */
+  VENDOR_PAYMENT /* vendorId */
+  RECHARGE /* serviceTransaction id */
+  RECHARGE_REFUND /* serviceTransaction id */
+  WITHDRAWAL
+  WITHDRAWAL_REFUND
+  BILL_REQUEST // debit when request raised
+  BILL_REFUND // credit when rejected
+  AUTOPAY
+  AUTOPAY_REFUND
+}
+
 model WalletTransaction {
   id       String @id @default(cuid())
   userId   String
@@ -143,15 +258,17 @@ model WalletTransaction {
   points Decimal         @db.Decimal(15, 2)
 
   description   String
-  referenceType String? // "REGISTRATION", "REENTRY", "COMMISSION_LEVEL_1", "WITHDRAWAL", etc.
-  referenceId   String? // Related account/withdrawal ID
+  referenceType ReferenceType
+  referenceId   String
 
   serviceTransaction ServiceTransaction?
+  billRequest        BillRequest?
   // Link to user and wallet
   user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   wallet             Wallet              @relation(fields: [walletId], references: [id], onDelete: Cascade)
 
-  createdAt DateTime @default(now())
+  createdAt        DateTime          @default(now())
+  autoPayExecution AutoPayExecution?
 
   @@index([userId])
   @@index([walletId])
@@ -159,14 +276,15 @@ model WalletTransaction {
 }
 
 model WithdrawalRequest {
-  id              String  @id @default(cuid())
-  userId          String
-  pointsRequested Decimal @db.Decimal(15, 2)
+  id     String @id @default(cuid())
+  userId String
 
-  status            WithdrawalStatus @default(PENDING)
-  amountTransferred Decimal?         @db.Decimal(15, 2) // Actual ₹ transferred by admin
+  pointsRequested  Decimal @db.Decimal(15, 2)
+  serviceFee       Decimal @db.Decimal(15, 2)
+  amountToTransfer Decimal @db.Decimal(15, 2)
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status WithdrawalStatus @default(PENDING)
+  user   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -200,23 +318,6 @@ model Payment {
   @@index([status])
 }
 
-enum ServiceType {
-  MOBILE_PREPAID
-  DTH
-  ELECTRICITY
-  GAS
-  WATER
-  LPG_Booking
-}
-
-enum ServiceStatus {
-  PENDING
-  SUCCESS
-  FAILED
-  REFUNDED
-}
-
-// New model
 model ServiceTransaction {
   id     String @id @default(cuid())
   userId String
@@ -263,47 +364,6 @@ model ServiceTransaction {
   @@index([createdAt])
 }
 
-enum PaymentType {
-  REGISTRATION
-}
-
-enum PaymentStatus {
-  PENDING
-  SUCCESS
-  FAILED
-  REFUNDED
-}
-
-enum WalletType {
-  SPEND
-  INCENTIVE
-  WITHDRAWAL
-}
-
-enum TransactionType {
-  CREDIT
-  DEBIT
-}
-
-enum WithdrawalStatus {
-  PENDING
-  APPROVED
-  REJECTED
-  COMPLETED
-}
-
-// ============ VENDOR SIDE ============
-
-enum VendorRole {
-  VENDOR
-}
-
-enum VendorApprovalStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
-
 model Vendor {
   id       String @id @default(cuid())
   phone    String @unique
@@ -328,54 +388,171 @@ model Vendor {
   bankDetails VendorBankDetail?
 
   // Approval workflow
-  approvalStatus  VendorApprovalStatus // PENDING, APPROVED, REJECTED
+  approvalStatus  VendorApprovalStatus @default(PENDING) // PENDING, APPROVED, REJECTED
   rejectionReason String?
   isActive        Boolean              @default(false)
 
-  commissionRate Decimal @db.Decimal(5, 2) // Commission percentage (e.g., 2.5 for 2.5%)
+  commissionRate Decimal @default(0.0) @db.Decimal(5, 2)
 
   // Vendor transactions (payments received from users)
-  transactions VendorTransaction[]
+  wallet                   VendorWallet?
+  transactions             VendorTransaction[]
+  vendorwithdrawalRequests VendorWithdrawalRequest[]
+
+  // ✅ QR for payments
+  paymentQr String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model VendorBankDetail {
-  id            String   @id @default(cuid())
-  vendorId      String   @unique
+  id            String      @id @default(cuid())
+  vendorId      String      @unique
   bankName      String
   accountNumber String
+  accountType   AccountType @default(SAVINGS)
   ifscCode      String
   upiId         String?
   qrCode        String?
   gPay          String?
-  createdAt     DateTime @default(now())
+  createdAt     DateTime    @default(now())
 
   vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
 
   @@map("vendor_bank_details")
 }
 
+model VendorWallet {
+  id                String  @id @default(cuid())
+  vendorId          String  @unique // enforces one wallet per vendor
+  balance           Decimal @default(0) @db.Decimal(15, 2)
+  processingBalance Decimal @default(0) @db.Decimal(15, 2)
+
+  vendor       Vendor              @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  transactions VendorTransaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model VendorTransaction {
-  id       String @id @default(cuid())
-  vendorId String
+  id             String        @id @default(cuid())
+  vendorId       String
+  userId         String
+  vendorWalletId String?
+  vendorWallet   VendorWallet? @relation(fields: [vendorWalletId], references: [id])
 
-  // Which user made the purchase
-  userId String
-
-  amount           Decimal  @db.Decimal(15, 2)
-  commissionAmount Decimal? @db.Decimal(15, 2)
+  amount           Decimal @db.Decimal(15, 2)
+  commissionAmount Decimal @default(0) @db.Decimal(15, 2) // always recorded, not nullable
   description      String
 
-  // Payment status
-  status PaymentStatus @default(PENDING)
-
   vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
 
   @@index([vendorId])
   @@index([userId])
   @@index([createdAt])
+}
+
+model VendorWithdrawalRequest {
+  id              String  @id @default(cuid())
+  vendorId        String
+  pointsRequested Decimal @db.Decimal(15, 2)
+
+  status            WithdrawalStatus @default(PENDING)
+  amountTransferred Decimal?         @db.Decimal(15, 2) //amt transfered
+  transactionRef    String? // admin field
+  settledAt         DateTime?
+
+  vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([vendorId])
+  @@index([status])
+}
+
+enum AutoPayStatus {
+  PENDING_APPROVAL
+  APPROVED
+  ACTIVE
+  PAUSED
+  CANCELLED
+  REJECTED
+}
+
+enum AutoPayDueDate {
+  FIVE // 5th
+  TEN // 10th
+  FIFTEEN // 15th
+}
+
+enum AutoPayCategory {
+  RENT
+  SCHOOL
+  COLLEGE
+  EMI
+  TUITION
+}
+
+enum AutoPayExecutionStatus {
+  SUCCESS // deducted + bill generated
+  INSUFFICIENT // skipped — not enough balance
+  FAILED // unexpected error
+}
+
+model AutoPay {
+  id     String @id @default(cuid())
+  userId String
+
+  beneficiaryName String
+  bankName        String
+  accountNumber   String
+  ifscCode        String
+  upiId           String?
+  amount          Decimal         @db.Decimal(15, 2)
+  dueDate         AutoPayDueDate
+  category        AutoPayCategory
+
+  status AutoPayStatus @default(PENDING_APPROVAL)
+
+  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  executions AutoPayExecution[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([dueDate])
+}
+
+model AutoPayExecution {
+  id        String @id @default(cuid())
+  autoPayId String
+  userId    String
+
+  amount     Decimal @db.Decimal(15, 2) // snapshot of amount at time of execution
+  charge     Decimal @db.Decimal(15, 2) // 10%
+  totalDebit Decimal @db.Decimal(15, 2) // amount + charge
+
+  status AutoPayExecutionStatus
+
+  // Linked wallet transaction — only present on SUCCESS
+  walletTransactionId String? @unique
+
+  autoPay           AutoPay            @relation(fields: [autoPayId], references: [id], onDelete: Cascade)
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  walletTransaction WalletTransaction? @relation(fields: [walletTransactionId], references: [id])
+
+  executedAt DateTime @default(now())
+
+  @@index([autoPayId])
+  @@index([userId])
+  @@index([status])
+  @@index([executedAt])
 }

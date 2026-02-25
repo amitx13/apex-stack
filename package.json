@@ -14,7 +14,9 @@
     "db:push": "turbo run db:push",
     "db:migrate": "turbo run db:migrate",
     "db:studio": "turbo run db:studio",
-    "clean": "rm -rf .turbo node_modules && npx turbo run clean --force"
+    "clean": "rm -rf .turbo node_modules && npx turbo run clean --force",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   },
   "devDependencies": {
     "prettier": "^3.7.4",
@@ -28,5 +30,11 @@
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "version": "1.0.0",
+  "dependencies": {
+    "expo": "~54.0.32",
+    "react": "19.1.0",
+    "react-native": "0.81.5"
+  }
 }

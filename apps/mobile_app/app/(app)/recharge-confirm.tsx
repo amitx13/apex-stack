@@ -9,12 +9,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '@/store/authStore';
 import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
+import { User } from '@repo/types';
 
 export default function RechargeConfirmScreen() {
     const router = useRouter();
     const { mobileNumber, operatorName, operatorCode, amount, planDesc } = useLocalSearchParams();
     const { showSuccess, showError } = useMessage();
-    const { user, fetchUserDetails } = useAuthStore();
+    const { fetchUserDetails } = useAuthStore();
+    const user = useAuthStore((state) => state.user) as User;
     const [isProcessing, setIsProcessing] = useState(false);
 
     const handlePayment = async () => {

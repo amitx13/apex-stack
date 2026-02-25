@@ -1,5 +1,6 @@
 import { prisma } from '@repo/db';
 import { MLM_CONFIG } from '../config/mlm.constants';
+import { ApiError } from '../utils/ApiError';
 
 const MAX_CHILDREN = MLM_CONFIG.MATRIX_WIDTH;
 
@@ -16,7 +17,7 @@ export async function findNextAvailablePosition(): Promise<{
   });
 
   if (!rootAccount) {
-    throw new Error(
+    throw new ApiError(404,
       'Root account (admin) not found. Please run initialize-admin script first.'
     );
   }
@@ -61,7 +62,7 @@ export async function findNextAvailablePosition(): Promise<{
     }
   }
 
-  throw new Error('BFS traversal completed without finding available position');
+  throw new ApiError(404, 'BFS traversal completed without finding available position');
 }
 
 /**
@@ -144,7 +145,7 @@ export async function getAdminUserId(): Promise<string> {
   });
 
   if (!admin) {
-    throw new Error('Admin user not found');
+    throw new ApiError(404, 'Admin user not found');
   }
 
   return admin.id;

@@ -8,6 +8,9 @@ const router = Router();
 // Get bbps operators
 router.get('/operators/', authMiddleware, asyncHandler(bbpsController.getOperators));
 
+// Get bbps operator extra details (only available for some operators like Jharkhand Bijli, Hero FinCorp, HPCL)
+router.get('/get-operator-extra-details', authMiddleware, asyncHandler(bbpsController.getBBPSExtraParams));
+
 // Fetch bbps bill
 router.post('/fetch-bill', authMiddleware, asyncHandler(bbpsController.fetchBill));
 

@@ -18,33 +18,45 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="scan"
-          options={{
-            title: 'Scan & Pay',
-          }}
-        />
-        <Tabs.Screen
           name="profile"
           options={{
             title: 'Profile',
           }}
         />
         <Tabs.Screen
-          name="spendwallet"
+          name="scan"
           options={{
-            title: 'Spend Wallet',
+            title: 'Scan & Pay',
           }}
         />
         <Tabs.Screen
           name="history"
           options={{
-            title: 'Spend Wallet',
+            title: 'History',
           }}
         />
         <Tabs.Screen
           name="withdrawalwallet"
           options={{
-            title: 'Spend Wallet',
+            title: 'Withdrawal Wallet',
+          }}
+        />
+        <Tabs.Screen
+          name="userBank"
+          options={{
+            title: 'Bank Detials',
+          }}
+        />
+        <Tabs.Screen
+          name="referrals"
+          options={{
+            title: 'Referrals',
+          }}
+        />
+        <Tabs.Screen
+          name="bills"
+          options={{
+            title: 'Upload Bill',
           }}
         />
       </Tabs>

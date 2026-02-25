@@ -2,12 +2,14 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import morgan from "morgan";
+import path from "path";
 import { errorHandler } from "./middlewares/errorHandler.js";
 import userRoutes from "./routes/user.routes.js";
+import autopay from "./routes/autopay.routes.js";
 import paymentRoutes from './routes/payment.routes.js'
 import rechargeRoutes from "./routes/recharge.routes.js"
 import bbpsRoutes from  "./routes/bbps.routes.js"
-import { startReentryCron } from "./jobs/reentry-cron.js";
+import { startReentryCron, startSettlementCron } from "./jobs/cron.js";
 import { imwalletAPIService } from "./services/imwallet-api.service.js";
 import axios from "axios";
 import { imwalletConfig } from "./config/imwallet.config.js";
@@ -24,68 +26,46 @@ app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
-
 app.use('/api/v1', userRoutes);
+app.use('/api/v1', autopay);
 app.use('/api/v1/payment', paymentRoutes); 
 app.use('/api/v1/recharge', rechargeRoutes);
 app.use('/api/v1/bbps', bbpsRoutes)
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+
 
 // Temporary route to check IMWallet balance
-app.get('/api/v1/imwallet/balance', async (_req, res) => {
-    try {
-        const balance = await imwalletAPIService.checkBalance();
-        res.json({ success: true, balance });
-    } catch (error: any) {
-        console.error('Error fetching IMWallet balance:', error.message);
-        res.status(500).json({ success: false, message: 'Failed to fetch IMWallet balance' });
-    }
-});
+// app.get('/api/v1/imwallet/balance', async (_req, res) => {
+//     try {
+//         const balance = await imwalletAPIService.checkBalance();
+//         res.json({ success: true, balance });
+//     } catch (error: any) {
+//         console.error('Error fetching IMWallet balance:', error.message);
+//         res.status(500).json({ success: false, message: 'Failed to fetch IMWallet balance' });
+//     }
+// });
 
-app.get('/api/v1/checkRechargeStatus/:orderId', async (req, res) => {
-    const { orderId } = req.params;
+// app.get('/api/v1/checkRechargeStatus/:orderId', async (req, res) => {
+//     const { orderId } = req.params;
 
-    try {
-        const result = await imwalletAPIService.checkRechargeStatus({
-          orderId:orderId,
-          dot: new Date().toISOString().split('T')[0],
-        });
-        res.json({ success: true, data: result });
-    } catch (error: any) {
-        console.error('Error checking recharge status:', error.message);
-        res.status(500).json({ success: false, message: 'Failed to check recharge status' });
-    }
-});
+//     try {
+//         const result = await imwalletAPIService.checkRechargeStatus({
+//           orderId:orderId,
+//           dot: new Date().toISOString().split('T')[0],
+//         });
+//         res.json({ success: true, data: result });
+//     } catch (error: any) {
+//         console.error('Error checking recharge status:', error.message);
+//         res.status(500).json({ success: false, message: 'Failed to check recharge status' });
+//     }
+// });
 
 
 /* ---------- ERROR HANDLER (LAST) ---------- */
 app.use(errorHandler);
 
-// setTimeout(async () => {
-//   try {
-//     const balance = await imwalletAPIService.checkBalance();
-//     console.log('✅ IMWallet Balance:', balance);
-//   } catch (error: any) {
-//     console.error('❌ IMWallet Error:', error.message);
-//   }
-// }, 2000);
-
-
-// setTimeout(async () => {
-//   try {
-//     const res = await axios.post('https://partner.imwallet.in/web_services/BBPS/getOperator.jsp',{
-//         webToken: imwalletConfig.webToken,
-//         userCode: imwalletConfig.userCode,
-//         parameters: {
-//             category:'DTH'
-//         }
-//     });
-//     console.log('✅ DTH operators:', res.data);
-//   } catch (error: any) {
-//     console.error('❌ IMWallet Error:', error.message);
-//   }
-// }, 2000);
-
 // startReentryCron()
+// startSettlementCron()
 
 const PORT = process.env.PORT || 3000;
 

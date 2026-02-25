@@ -3,25 +3,32 @@ import { useAuthStore } from '@/store/authStore';
 import { View, Pressable, ScrollView, ActivityIndicator } from 'react-native';
 import { AntDesign, FontAwesome6, Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/axios';
 import { useRouter } from 'expo-router';
 import { useMessage } from '@/contexts/MessageContext';
 import AllInOneSDKManager from 'paytmpayments-allinone-react-native'
 import { Screen } from '@/components/Screen';
-import { Operator, set } from '@repo/types';
+import { Operator, set, User } from '@repo/types';
 import { OperatorSelectionModal } from '@/components/OperatorSelectionModal';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { user, logout, fetchUserDetails, isLoading } = useAuthStore();
-  const [isPaymentLoading, serIsPaymentLoading] = useState<boolean>(false)
-  const [isGasVerifying, serIsGasVerifying] = useState<boolean>(false)
+  const { logout, fetchUserDetails, isLoading } = useAuthStore();
+  const user = useAuthStore((state) => state.user) as User;
+
+  const [isBalanceLoading, setIsBalanceLoading] = useState<boolean>(false)
+  const [vendorWalletBal, setVendorWalletBal] = useState<number | null>(null)
+  const [withdrawalWalletBal, setWithdrawalWalletBal] = useState<string | null>(null);
+  const [isWithdrawalLoading, setIsWithdrawalLoading] = useState(false);
+
+  const [isPaymentLoading, setIsPaymentLoading] = useState<boolean>(false)
+  const [isGasVerifying, setIsGasVerifying] = useState<boolean>(false)
 
   const [showOperatorModal, setShowOperatorModal] = useState<boolean>(false);
   const [isOperatorsLoading, setIsOperatorsLoading] = useState<boolean>(false);
   const [operators, setOperators] = useState<Operator[] | null>(null)
-  // const router = useRouter();
+
   const { showSuccess, showError, showWarning, showInfo, showMessage } = useMessage();
 
   // Get user initials for avatar fallback
@@ -84,7 +91,7 @@ export default function HomeScreen() {
   }, [logout, showMessage]);
 
   const handlePayment = async () => {
-    serIsPaymentLoading(true);
+    setIsPaymentLoading(true);
     try {
       // 1. Get txnToken from backend
       const initRes = await api.post('/payment/initiate');
@@ -171,17 +178,11 @@ export default function HomeScreen() {
         );
       }
     } finally {
-      serIsPaymentLoading(false);
+      setIsPaymentLoading(false);
       fetchUserDetails()
     }
   };
-
-  const handleVerification = () => {
-    console.log(user)
-  }
-
-  // console.log(user)
-
+  
   const initiateMobileRecharge = async () => {
     if (!user?.isActive) {
       showWarning('Account Inactive', 'Please activate your account to access this feature.');
@@ -234,6 +235,80 @@ export default function HomeScreen() {
     });
   }
 
+  const handleNavigateToAddBank = () => {
+    if (!user?.name) {
+      showError("Error", "No user name found")
+      return
+    }
+
+    router.push({
+      pathname: '/(app)/addBankDetails',
+      params: { name: user?.name }
+    });
+  }
+
+
+  const handleGetWalletBallance = async () => {
+    if (!user?.isActive) {
+      showError("Activation Error", "Vendor account is Inactive cannot perform this operation")
+      return
+    }
+    setIsBalanceLoading(true)
+    try {
+      const bal = await api.get('/userWallerBal')
+      setVendorWalletBal(bal.data.data)
+    } catch (error: any) {
+      showError('Error', error?.response?.data?.message || 'Failed to fetch bank details');
+    } finally {
+      setIsBalanceLoading(false)
+    }
+  }
+
+  const handleGetWithdrawalBalance = async () => {
+    if (isWithdrawalLoading) return;
+    setIsWithdrawalLoading(true);
+    try {
+      const res = await api.get('/getWithdrawalBalance');
+      setWithdrawalWalletBal(res.data.data);
+    } catch (e: any) {
+      showError('Error', e?.response?.data?.message || 'Failed to fetch balance');
+    } finally {
+      setIsWithdrawalLoading(false);
+    }
+  };
+
+  const handleNavigateToReferralPage = () => {
+    if (!user?.isActive) {
+      showWarning('Account Inactive', 'Please activate your account to access this feature.');
+      return;
+    }
+    router.push({
+      pathname: '/(tabs)/referrals',
+    });
+  }
+
+  const handleNavigateToUploadBill = () => {
+    if (!user?.isActive) {
+      showWarning('Account Inactive', 'Please activate your account to access this feature.');
+      return
+    }
+
+    router.push({
+      pathname: '/(tabs)/bills',
+    });
+  }
+
+  const handleNavigateToAutoPay = () => {
+    if (!user?.isActive) {
+      showWarning('Account Inactive', 'Please activate your account to access this feature.');
+      return
+    }
+
+    router.push({
+      pathname: '/(tabs)/autopay',
+    });
+  }
+
   if (isLoading) {
     return (
       <View className="flex-1 bg-background items-center justify-center">
@@ -242,9 +317,10 @@ export default function HomeScreen() {
     );
   }
 
+  if (!user) return null;
 
   return (
-    <Screen>
+    <Screen hasTabBar={false}>
       <View className="flex-1 bg-background">
         {/* Top Header */}
         <LinearGradient
@@ -308,13 +384,6 @@ export default function HomeScreen() {
 
             {/* Right: Action Buttons */}
             <View className="flex-row items-center gap-3">
-              {/* Notifications */}
-              <Pressable className="w-10 h-10 rounded-full bg-card/50 items-center justify-center active:opacity-70">
-                <Ionicons name="notifications-outline" size={22} color="#00ADB5" />
-                {/* Notification Badge */}
-                <View className="absolute top-1 right-1 w-2 h-2 bg-destructive rounded-full" />
-              </Pressable>
-
               {/* Logout Button */}
               <Pressable
                 onPress={handleOpenLogoutSheet}
@@ -332,272 +401,315 @@ export default function HomeScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerClassName="pb-28"
         >
+          {!user?.isBankAdded && (
+            <Pressable
+              onPress={handleNavigateToAddBank}
+              className="mb-4 active:scale-95"
+            >
+              <LinearGradient
+                colors={['rgba(59,130,246,0.15)', 'rgba(59,130,246,0.05)']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={{ borderRadius: 16 }}
+              >
+                <View className="flex-row items-center gap-3 px-4 py-3.5 border border-blue-500/25 rounded-2xl">
+                  <View className="w-9 h-9 bg-blue-500/20 rounded-xl items-center justify-center">
+                    <MaterialCommunityIcons name="bank-outline" size={18} color="#3B82F6" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-blue-400 text-xs font-bold uppercase tracking-wider mb-0.5">
+                      Action Required
+                    </Text>
+                    <Text className="text-foreground text-sm font-bold">
+                      Add Your Bank Details
+                    </Text>
+                  </View>
+                  <View className="w-7 h-7 bg-blue-500/20 rounded-full items-center justify-center">
+                    <Ionicons name="arrow-forward" size={14} color="#3B82F6" />
+                  </View>
+                </View>
+              </LinearGradient>
+            </Pressable>
+          )}
+
           {/* Activation Banner or Stats Cards */}
           {!user?.isActive ? (
             <>
-              {!user?.isGasConsumerVerified &&
-                <View className="mb-6">
-                  <View className="bg-orange-500/10 rounded-2xl p-4 border border-orange-500/30">
-                    <View className="flex-row items-center gap-3 mb-3">
-                      <View className="w-10 h-10 bg-orange-500/20 rounded-xl items-center justify-center">
-                        <Ionicons name="flame" size={20} color="#F97316" />
-                      </View>
-                      <View className="flex-1">
-                        <Text className="text-foreground text-sm font-bold mb-0.5">
-                          Gas Consumer Verification
-                        </Text>
-                        <Text className="text-muted-foreground text-[11px]">
-                          Verify your gas connection details
-                        </Text>
-                      </View>
-                    </View>
-
-                    <Pressable
-                      className="rounded-xl overflow-hidden active:opacity-90"
-                      onPress={handleVerification}
-                      disabled={isGasVerifying}
-                    >
-                      <LinearGradient
-                        colors={['#F97316', '#EA580C']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                        className="py-2.5 items-center"
-                      >
-                        {isGasVerifying ? (
-                          <ActivityIndicator size="small" color="white" />
-                        ) : (
-                          <Text className="text-white font-bold text-sm">
-                            Verify Consumer Number
-                          </Text>
-                        )}
-                      </LinearGradient>
-                    </Pressable>
-                  </View>
-                </View>
-              }
-              <View className="mb-6">
-                <View className="bg-red-500/10 rounded-2xl p-4 border border-red-500/30">
-                  <View className="flex-row items-center gap-3 mb-3">
-                    <View className="w-10 h-10 bg-red-500/20 rounded-xl items-center justify-center">
-                      <Ionicons name="lock-closed" size={20} color="#EF4444" />
+              {/* ── Account Inactive Banner ───────────────────────────────────────── */}
+              <Pressable
+                onPress={handlePayment}
+                disabled={isPaymentLoading}
+                className="mb-6 active:scale-95"
+              >
+                <LinearGradient
+                  colors={['rgba(239,68,68,0.15)', 'rgba(239,68,68,0.05)']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={{ borderRadius: 16 }}
+                >
+                  <View className="flex-row items-center gap-3 px-4 py-3.5 border border-red-500/25 rounded-2xl">
+                    <View className="w-9 h-9 bg-red-500/20 rounded-xl items-center justify-center">
+                      <Ionicons name="lock-closed" size={18} color="#EF4444" />
                     </View>
                     <View className="flex-1">
-                      <Text className="text-foreground text-sm font-bold mb-0.5">
+                      <Text className="text-red-400 text-xs font-bold uppercase tracking-wider mb-0.5">
                         Account Inactive
                       </Text>
-                      <Text className="text-muted-foreground text-[11px]">
-                        Pay ₹199 to unlock all features
+                      <Text className="text-foreground text-sm font-bold">
+                        Activate for ₹199
                       </Text>
                     </View>
+                    {isPaymentLoading ? (
+                      <ActivityIndicator size="small" color="#EF4444" />
+                    ) : (
+                      <View className="bg-red-500 rounded-xl px-3 py-1.5">
+                        <Text className="text-white text-[11px] font-black">
+                          PAY NOW
+                        </Text>
+                      </View>
+                    )}
                   </View>
-
-                  <Pressable className="rounded-xl overflow-hidden active:opacity-90" onPress={handlePayment} disabled={isPaymentLoading}>
-                    <LinearGradient
-                      colors={['#EF4444', '#DC2626']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      className="py-2.5 items-center"
-                    >{
-                        isPaymentLoading ?
-                          (
-                            <ActivityIndicator size="small" color="white" />
-                          ) : (
-                            <Text className="text-white font-bold text-sm">
-                              Activate for ₹199
-                            </Text>
-                          )
-                      }
-                    </LinearGradient>
-                  </Pressable>
-                </View>
-              </View>
+                </LinearGradient>
+              </Pressable>
             </>
           ) : (
             <View className="flex-row gap-2 mb-6">
               {/* Balance Card */}
-              <View className="flex-1 bg-primary/10 rounded-2xl p-3 border border-primary/20">
+              <Pressable
+                className="flex-1 bg-primary/10 rounded-2xl p-3 border border-primary/20 active:scale-95 overflow-hidden"
+                onPress={handleGetWalletBallance}
+              >
                 <View className="flex-row items-center justify-between mb-1.5">
                   <View className="flex-row items-center gap-2">
-                    <View className="w-7 h-7 bg-primary/30 rounded-lg items-center justify-center">
+                    <View className="w-7 h-7 bg-primary/30 rounded-full items-center justify-center">
                       <MaterialCommunityIcons name="cash-multiple" size={18} color="#00ADB5" />
                     </View>
                     <Text className="text-muted-foreground text-[10px] font-medium">
-                      Utility Wallet
+                      Spend Wallet
                     </Text>
                   </View>
-                  <Pressable className="w-7 h-7 items-center justify-center" onPress={() => router.replace('/(tabs)/spendwallet')}>
-                    <MaterialIcons name="keyboard-double-arrow-right" size={16} color="#00ADB5" />
-                  </Pressable>
+
+                  {/* ✅ Refresh icon or loader on the right */}
+                  {isBalanceLoading
+                    ? <ActivityIndicator size="small" color="#00ADB5" />
+                    : <View className="w-7 h-7 items-center justify-center">
+                      <Ionicons name="refresh" size={15} color="#00ADB5" />
+                    </View>
+                  }
                 </View>
-                <Text className="text-foreground text-xl font-bold mb-0.5">
-                  <MaterialCommunityIcons name="currency-rupee" size={18} color="#22c55e" />
-                  {`${user.spendBalance}`}
-                </Text>
+
+                {/* ✅ Balance or tap to check */}
+                {vendorWalletBal ? (
+                  <View className="flex-row items-center mb-0.5">
+                    <MaterialIcons name="currency-rupee" size={16} color="#00ADB5" style={{ marginTop: 2 }} />
+                    <Text className="text-[#00ADB5] text-xl font-bold">
+                      {vendorWalletBal}
+                    </Text>
+                  </View>
+                ) : (
+                  <View className="flex-row items-center gap-2 mb-0.5">
+                    <Text className="text-primary text-sm font-bold">
+                      Tap to check
+                    </Text>
+                  </View>
+                )}
+
                 <Text className="text-primary text-[10px] font-semibold">
                   Pay bills & recharge services
                 </Text>
-              </View>
+              </Pressable>
 
-              {/* Rewards Card */}
-              <View className="flex-1 bg-orange-500/10 rounded-2xl p-3 border border-orange-500/20">
+              <Pressable
+                className="flex-1 bg-orange-500/10 rounded-2xl p-3 border border-orange-500/20 active:scale-95 overflow-hidden"
+                onPress={handleGetWithdrawalBalance}
+              >
                 <View className="flex-row items-center justify-between mb-1.5">
                   <View className="flex-row items-center gap-2">
-                    <View className="w-7 h-7 bg-orange-500/30 rounded-lg items-center justify-center">
+                    <View className="w-7 h-7 bg-orange-500/30 rounded-full items-center justify-center">
                       <Ionicons name="wallet" size={16} color="#F97316" />
                     </View>
                     <Text className="text-muted-foreground text-[10px] font-medium">
                       Withdrawal Wallet
                     </Text>
                   </View>
-                  <Pressable className="w-7 h-7 items-center justify-center" onPress={() => router.replace('/(tabs)/withdrawalwallet')}>
-                    <MaterialIcons name="keyboard-double-arrow-right" size={16} color="#F97316" />
+
+                  <Pressable
+                    className="w-7 h-7 rounded-full bg-orange-500/20 items-center justify-center"
+                    onPress={() => router.replace('/(tabs)/withdrawalwallet')}
+                  >
+                    <Ionicons name="arrow-forward" size={16} color="#F97316" />
                   </Pressable>
                 </View>
-                <Text className="text-foreground text-xl font-bold mb-0.5">
-                  <MaterialCommunityIcons name="currency-rupee" size={18} color="#22c55e" />
-                  {`${user.withdrawalBalance}`}
-                </Text>
+
+                {isWithdrawalLoading ? (
+                  <ActivityIndicator size="small" color="#F97316" className='items-start' />
+                ) : withdrawalWalletBal ? (
+                  <View className="flex-row items-center mb-0.5">
+                    <MaterialIcons name="currency-rupee" size={16} color="#F97316" style={{ marginTop: 2 }} />
+                    <Text className="text-[#F97316] text-xl font-bold">
+                      {withdrawalWalletBal}
+                    </Text>
+                  </View>
+                ) : (
+                  <View className="flex-row items-center gap-2 mb-0.5">
+                    <Text className="text-orange-500 text-sm font-bold">
+                      Tap to check
+                    </Text>
+                  </View>
+                )}
+
                 <Text className="text-orange-500 text-[10px] font-semibold">
                   Withdraw to bank
                 </Text>
-              </View>
+              </Pressable>
+
             </View>
           )}
 
-          {/* Services Section */}
+          {/* ── Services Section ─────────────────────────────────────────────────── */}
+
           <View className="mb-6">
             <Text className="text-foreground text-base font-bold mb-3">
               Services
             </Text>
 
-            <View className="flex-row flex-wrap gap-2">
-              {/* Mobile Recharge */}
+            {/* Row 1 */}
+            <View className="flex-row gap-2 mb-2">
               <Pressable
                 onPress={initiateMobileRecharge}
-                className="bg-card/50 rounded-xl py-4 items-center active:scale-95"
-                style={{ width: '31.5%' }}
                 disabled={isOperatorsLoading}
+                className="flex-1 py-3 items-center active:scale-95"
               >
-                <View className="w-11 h-11 bg-green-500/10 rounded-xl items-center justify-center mb-1.5">
-                  {isOperatorsLoading ? <ActivityIndicator size="small" color="#10B981" /> :
-                    <Ionicons name="phone-portrait-outline" size={24} color="#10B981" />}
+                <View className="w-12 h-12 bg-green-500/10 rounded-xl items-center justify-center mb-1">
+                  {isOperatorsLoading
+                    ? <ActivityIndicator size="small" color="#10B981" />
+                    : <Ionicons name="phone-portrait-outline" size={24} color="#10B981" />
+                  }
                 </View>
-                <Text className="text-foreground text-[11px] font-medium">
-                  Mobile recharge
+                <Text className="text-foreground text-[11px] font-semibold text-center" numberOfLines={1}>
+                  Recharge
                 </Text>
               </Pressable>
 
-              {/* DTH Recharge */}
               <Pressable
                 onPress={() => handleBBPSOperatorSelected('DTH')}
-                className="bg-card/50 rounded-xl py-4 items-center active:scale-95"
-                style={{ width: '31.5%' }}
+                className="flex-1 py-3 items-center active:scale-95"
               >
-                <View className="w-11 h-11 bg-purple-500/10 rounded-xl items-center justify-center mb-1.5">
+                <View className="w-12 h-12 bg-purple-500/10 rounded-xl items-center justify-center mb-1">
                   <Ionicons name="tv-outline" size={24} color="#A855F7" />
                 </View>
-                <Text className="text-foreground text-[11px] font-medium">
+                <Text className="text-foreground text-[11px] font-semibold text-center" numberOfLines={1}>
                   DTH
                 </Text>
               </Pressable>
 
-              {/* Book Gas */}
-              <Pressable
-                onPress={() => handleBBPSOperatorSelected('LPG Booking')}
-                className="bg-card/50 rounded-xl py-4 items-center active:scale-95"
-                style={{ width: '31.5%' }}
-              >
-                <View className="w-11 h-11 bg-orange-500/10 rounded-xl items-center justify-center mb-1.5">
-                  <Ionicons name="flame-outline" size={24} color="#F97316" />
-                </View>
-                <Text className="text-foreground text-[11px] font-medium">
-                  Book Gas
-                </Text>
-              </Pressable>
-
-              {/* Gas Bill */}
-              <Pressable
-                onPress={() => handleBBPSOperatorSelected('Gas')}
-                className="bg-card/50 rounded-xl py-4 items-center active:scale-95"
-                style={{ width: '31.5%' }}
-              >
-                <View className="w-11 h-11 bg-amber-500/10 rounded-xl items-center justify-center mb-1.5">
-                  <Ionicons name="receipt-outline" size={24} color="#F59E0B" />
-                </View>
-                <Text className="text-foreground text-[11px] font-medium">
-                  Gas Bill
-                </Text>
-              </Pressable>
-
-              {/* Electricity Bill */}
               <Pressable
                 onPress={() => handleBBPSOperatorSelected('Electricity')}
-                className="bg-card/50 rounded-xl py-4 items-center active:scale-95"
-                style={{ width: '31.5%' }}
+                className="flex-1 py-3 items-center active:scale-95"
               >
-                <View className="w-11 h-11 bg-yellow-500/10 rounded-xl items-center justify-center mb-1.5">
+                <View className="w-12 h-12 bg-yellow-500/10 rounded-xl items-center justify-center mb-1">
                   <Ionicons name="flash-outline" size={24} color="#EAB308" />
                 </View>
-                <Text className="text-foreground text-[11px] font-medium">
+                <Text className="text-foreground text-[11px] font-semibold text-center" numberOfLines={1}>
                   Electricity
                 </Text>
               </Pressable>
 
-              {/* Water Bill */}
               <Pressable
                 onPress={() => handleBBPSOperatorSelected('Water')}
-                className="bg-card/50 rounded-xl py-4 items-center active:scale-95"
-                style={{ width: '31.5%' }}
+                className="flex-1 py-3 items-center active:scale-95"
               >
-                <View className="w-11 h-11 bg-blue-500/10 rounded-xl items-center justify-center mb-1.5">
+                <View className="w-12 h-12 bg-blue-500/10 rounded-xl items-center justify-center mb-1">
                   <Ionicons name="water-outline" size={24} color="#3B82F6" />
                 </View>
-                <Text className="text-foreground text-[11px] font-medium">
+                <Text className="text-foreground text-[11px] font-semibold text-center" numberOfLines={1}>
                   Water
                 </Text>
               </Pressable>
             </View>
+
+            {/* Row 2 — Gas items left-aligned, not stretched */}
+            <View className="flex-row gap-2">
+              <Pressable
+                onPress={() => handleBBPSOperatorSelected('LPG Booking')}
+                className="py-3 items-center active:scale-95"
+                style={{ width: '23%' }}
+              >
+                <View className="w-12 h-12 bg-orange-500/10 rounded-xl items-center justify-center mb-1">
+                  <Ionicons name="flame-outline" size={24} color="#F97316" />
+                </View>
+                <Text className="text-foreground text-[11px] font-semibold text-center" numberOfLines={1}>
+                  LPG Book
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => handleBBPSOperatorSelected('Gas')}
+                className="py-3 items-center active:scale-95"
+                style={{ width: '23%' }}
+              >
+                <View className="w-12 h-12 bg-amber-500/10 rounded-xl items-center justify-center mb-1">
+                  <Ionicons name="receipt-outline" size={24} color="#F59E0B" />
+                </View>
+                <Text className="text-foreground text-[11px] font-semibold text-center" numberOfLines={1}>
+                  Gas Bill
+                </Text>
+              </Pressable>
+
+              {/* ✅ NEW — Bill Upload */}
+              <Pressable
+                onPress={handleNavigateToUploadBill}
+                className="py-3 items-center active:scale-95"
+                style={{ width: '23%' }}
+              >
+                <View className="w-12 h-12 bg-cyan-500/10 rounded-xl items-center justify-center mb-1">
+                  <Ionicons name="cloud-upload-outline" size={24} color="#06B6D4" />
+                </View>
+                <Text className="text-foreground text-[11px] font-semibold text-center" numberOfLines={1}>
+                  Bill Upload
+                </Text>
+              </Pressable>
+
+              {/* ✅ NEW — PayCycle */}
+              <Pressable
+                onPress={handleNavigateToAutoPay}
+                className="py-3 items-center active:scale-95"
+                style={{ width: '23%' }}
+              >
+                <View className="w-12 h-12 bg-rose-500/10 rounded-xl items-center justify-center mb-1">
+                  <MaterialCommunityIcons name="calendar-sync-outline" size={24} color="#F43F5E" />
+                </View>
+                <Text className="text-foreground text-[11px] font-semibold text-center" numberOfLines={1}>
+                  Auto Pay
+                </Text>
+              </Pressable>
+            </View>
           </View>
 
-          {/* Offers & Rewards Section */}
+          {/* ── Offers & Rewards Section ──────────────────────────────────────────── */}
           <View className="mb-6">
             <Text className="text-foreground text-base font-bold mb-3">
-              Offers & Rewards
+              Refer & Earn
             </Text>
 
             <View className="flex-row gap-2">
-              {/* Rewards */}
-              <Pressable className="flex-1 bg-card/50 rounded-xl py-4 items-center active:scale-95">
-                <View className="w-11 h-11 bg-gradient-to-br from-yellow-500/30 to-yellow-500/10 rounded-xl items-center justify-center mb-1.5">
-                  <AntDesign name="trophy" size={24} color="#EAB308" />
-                </View>
-                <Text className="text-foreground text-[11px] font-medium">
-                  Rewards
-                </Text>
-              </Pressable>
 
-              {/* Referrals */}
-              <Pressable className="flex-1 bg-card/50 rounded-xl py-4 items-center active:scale-95">
-                <View className="w-11 h-11 bg-gradient-to-br from-blue-500/30 to-blue-500/10 rounded-xl items-center justify-center mb-1.5">
+              <Pressable className="flex-1 py-3 items-center active:scale-95"
+                onPress={handleNavigateToReferralPage}
+              >
+                <View className="w-12 h-12 bg-blue-500/10 rounded-xl items-center justify-center mb-1">
                   <Ionicons name="people-outline" size={24} color="#3B82F6" />
                 </View>
-                <Text className="text-foreground text-[11px] font-medium">
+                <Text className="text-foreground text-[11px] font-semibold text-center" numberOfLines={1}>
                   Referrals
                 </Text>
               </Pressable>
+              <View style={{ flex: 1 }} />
+              <View style={{ flex: 1 }} />
+              <View style={{ flex: 1 }} />
             </View>
           </View>
 
-          {/* Transaction History Link */}
-          <Pressable className="flex-row items-center justify-between py-3 active:opacity-70" onPress={() => router.push('/(tabs)/history')}>
-            <View className="flex-row items-center gap-3">
-              <FontAwesome6 name="clock-rotate-left" size={18} color="#00ADB5" />
-              <Text className="text-foreground text-sm font-semibold">
-                See Transaction History
-              </Text>
-            </View>
-            <MaterialIcons name="keyboard-double-arrow-right" size={22} color="#00ADB5" />
-          </Pressable>
         </ScrollView >
       </View >
       <OperatorSelectionModal
@@ -606,6 +718,6 @@ export default function HomeScreen() {
         onClose={() => setShowOperatorModal(false)}
         onProceed={handleOperatorSelected}
       />
-    </Screen>
+    </Screen >
   );
 }

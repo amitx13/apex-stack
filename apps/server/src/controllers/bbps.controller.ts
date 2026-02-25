@@ -1,112 +1,7 @@
-/* import { Request, Response, NextFunction } from 'express';
-import { dthService } from '../services/dth.service';
-import { ApiError } from '../utils/ApiError';
-
-export class BBPSController {
-
-  async getDTHOperators(req: Request, res: Response, next: NextFunction) {
-    const userId = req.user?.userId;
-
-    if (!userId) {
-      throw new ApiError(401, 'Unauthorized');
-    }
-
-    const operators = await dthService.getDTHOperators();
-
-    return res.json({
-      success: true,
-      data: operators,
-    });
-  }
-
-
-  async fetchDTHBill(req: Request, res: Response, next: NextFunction) {
-    const userId = req.user?.userId;
-
-    if (!userId) {
-      throw new ApiError(401, 'Unauthorized');
-    }
-
-    const { subscriberId, spkey, operatorName } = req.body;
-
-    if (!subscriberId || !spkey || !operatorName) {
-      throw new ApiError(400, 'Missing required fields');
-    }
-
-    const result = await dthService.fetchDTHBill({
-      userId,
-      subscriberId,
-      spkey,
-      operatorName,
-    });
-
-    return res.json(result);
-  }
-
-  async processDTHRecharge(req: Request, res: Response, next: NextFunction) {
-    const userId = req.user?.userId;
-
-    if (!userId) {
-      throw new ApiError(401, 'Unauthorized');
-    }
-
-    const {
-      subscriberId,
-      spkey,
-      operatorName,
-      amount,
-      billFetchId,
-      customerName,
-      dueDate,
-      billDate,
-    } = req.body;
-
-    if (!subscriberId || !spkey || !operatorName || !amount) {
-      throw new ApiError(400, 'Missing required fields');
-    }
-
-    const result = await dthService.processDTHRecharge({
-      userId,
-      subscriberId,
-      spkey,
-      operatorName,
-      amount: parseFloat(amount),
-      billFetchId,
-      customerName,
-      dueDate,
-      billDate,
-    });
-
-    return res.json(result);
-  }
-
-  async handleCallback(req: Request, res: Response, next: NextFunction) {
-    const { status, orderid, imwtid, oprID } = req.body;
-
-    console.log('📞 BBPS Callback received:', req.body);
-
-    if (!status || !orderid) {
-      throw new ApiError(400, 'Invalid callback data');
-    }
-
-    const result = await dthService.handleCallback({
-      status,
-      orderid,
-      imwtid,
-      oprID,
-    });
-
-    return res.json(result);
-  }
-}
-
-export const bbpsController = new BBPSController();
- */
-
-// apps/server/src/controllers/bbps.controller.ts
 import { Request, Response } from 'express';
 import { ApiError } from '../utils/ApiError';
 import { bbpsService } from '../services/bbps.service';
+import { imwalletAPIService } from '../services/imwallet-api.service';
 
 export class BBPSController {
   /**
@@ -119,7 +14,7 @@ export class BBPSController {
     }
 
     const category = req.query.category as string;
-    
+
     if (!category) {
       throw new ApiError(400, 'category is required');
     }
@@ -233,6 +128,33 @@ export class BBPSController {
     });
 
     return res.json(result);
+  }
+
+  async getBBPSExtraParams(req: Request, res: Response) {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new ApiError(401, 'Unauthorized');
+    }
+
+    const { spkey } = req.query;
+
+    if (!spkey) {
+      throw new ApiError(400, 'spkey is required');
+    }
+
+    const spkeyNum = Number(spkey);
+    if (Number.isNaN(spkeyNum)) {
+      throw new ApiError(400,'Invalid spkey');
+    }
+
+    const result = await imwalletAPIService.getBBPSExtraParams(spkeyNum);
+    
+    if (result.status === 'FAILED') {
+      throw new ApiError(503, result.msg || 'Failed to fetch operator extra details');
+    }
+
+    return res.json(result);
+
   }
 }
 

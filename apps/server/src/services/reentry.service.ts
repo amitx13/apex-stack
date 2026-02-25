@@ -145,7 +145,7 @@ async function processSingleReentry(queueId: string, userName: string): Promise<
       'INCENTIVE',
       REENTRY_THRESHOLD,
       'Auto re-entry deduction',
-      'REENTRY',
+      'REENTRY_DEBIT',
       queueId,
       tx
     );

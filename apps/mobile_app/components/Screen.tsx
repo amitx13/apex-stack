@@ -1,3 +1,4 @@
+// apps/mobile/components/Screen.tsx
 import { useFocusEffect } from "expo-router";
 import Animated, {
   useSharedValue,
@@ -38,7 +39,8 @@ export function Screen({
       style={[
         {
           flex: 1,
-          paddingBottom: hasTabBar ? TAB_BAR_HEIGHT + insets.bottom : 0, // ✅ Conditional padding
+          paddingBottom: hasTabBar ? TAB_BAR_HEIGHT + 32 : 0, // ✅ Remove insets.bottom (your custom tab already handles it)
+          backgroundColor: '#222831', // ✅ Add explicit background color
         },
         style,
       ]}
