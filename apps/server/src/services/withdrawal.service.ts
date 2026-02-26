@@ -4,6 +4,7 @@ import { Prisma, prisma } from '@repo/db';
 import { getAdminSystemIds } from '../utils/system';
 import { addToAdminWallet } from './wallet.service';
 import { ApiError } from '../utils/ApiError';
+import { handleCommissionSplit } from './scanPay.service';
 
 type Decimal = Prisma.Decimal;
 const Decimal = Prisma.Decimal;
@@ -86,6 +87,17 @@ export async function completeWithdrawal(withdrawalId: string) {
 
     const request = await prisma.withdrawalRequest.findUnique({
         where: { id: withdrawalId },
+        select: {
+            status: true,
+            serviceFee: true,
+            user: {
+                select: {
+                    id: true,
+                    sponsorId: true,
+                }
+            },
+            pointsRequested: true,
+        }
     });
 
     if (!request) throw new ApiError(404, 'Withdrawal request not found');
@@ -99,13 +111,13 @@ export async function completeWithdrawal(withdrawalId: string) {
         data: { status: 'COMPLETED' },
     });
 
-    // 6% fee goes to admin only on successful completion
-    await addToAdminWallet(
-        adminId,
+    await handleCommissionSplit(
         request.serviceFee,
-        `Withdrawal service fee from user ${request.userId} (6% of ₹${request.pointsRequested})`,
-        'WITHDRAWAL',
-        withdrawalId
+        request.user.sponsorId,
+        adminId,
+        `Withdrawal commission from user ${request.user.id} (6% of ₹${request.pointsRequested})`,
+        'USER_COMMISSION',
+        request.user.id
     );
 
     return { message: 'Withdrawal marked as completed' };

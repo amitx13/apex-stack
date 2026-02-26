@@ -3,6 +3,9 @@ import { ApiError } from '../utils/ApiError';
 import { imwalletAPIService } from './imwallet-api.service';
 import { Prisma } from "@repo/db";
 import { creditToSpendWallet, deductFromWallet } from './wallet.service';
+import { FetchBillResponse } from '@repo/types';
+import { getAdminSystemIds } from '../utils/system';
+import { handleCommissionSplit } from './scanPay.service';
 
 type Decimal = Prisma.Decimal;
 const Decimal = Prisma.Decimal;
@@ -96,7 +99,7 @@ class BBPSService {
       throw new ApiError(400, 'User phone number not found');
     }
 
-    const billResponse = await imwalletAPIService.fetchBBPSBill({
+    const billResponse: FetchBillResponse = await imwalletAPIService.fetchBBPSBill({
       account,
       spkey,
       cust_mbl: user.phone,
@@ -114,15 +117,15 @@ class BBPSService {
     const data = billResponse.data;
 
     return {
-      success: true,
+      status: true,
       category,
       bill: {
         billFetchId: data.billFetchId,
         customerName: data.customerName,
-        billedAmount: parseFloat(data.billedamount),
-        payAmount: parseFloat(data.payamount),
+        billedAmount: data.billedamount,
+        payAmount: data.payamount,
         dueDate: data.dueDate,
-        billDate: data.billdate,
+        billDate: data.billDate,
         partPayment: data.partPayment,
         acceptPayment: data.acceptPayment,
       },
@@ -253,11 +256,15 @@ class BBPSService {
     }
 
     if (normalizedStatus === 'SUCCESS' || normalizedStatus === 'PENDING') {
+
+      const userCommission = new Decimal(amount).mul(10).div(100)
+      const totalAmt = new Decimal(amount).add(userCommission)
+
       const result = await prisma.$transaction(async (tx) => {
         const walletTxnId = await deductFromWallet(
           userId,
           'SPEND',
-          new Decimal(amount),
+          totalAmt,
           `${category} payment (${normalizedStatus}) - ${operatorName} - ${account}`,
           'RECHARGE',
           transaction.id,
@@ -270,10 +277,31 @@ class BBPSService {
             status: normalizedStatus,
             walletTransactionId: walletTxnId,
           },
+          include: {
+            user: {
+              select: {
+                id: true,
+                sponsorId: true,
+              }
+            }
+          }
         });
 
         return { updatedTransaction };
       });
+
+      if (normalizedStatus === 'SUCCESS') {
+        const { adminId } = await getAdminSystemIds()
+
+        await handleCommissionSplit(
+          userCommission,
+          result.updatedTransaction.user.sponsorId,
+          adminId,
+          `BBPS service commission from user ${userId} — ${operatorName} (10% of ₹${amount})`,
+          'USER_COMMISSION',
+          userId
+        );
+      }
 
       return {
         success: true,
@@ -304,6 +332,11 @@ class BBPSService {
 
     const transaction = await prisma.serviceTransaction.findUnique({
       where: { orderId: orderid },
+      include: {
+        user: {
+          select: { id: true, sponsorId: true }
+        }
+      }
     });
 
     if (!transaction) {
@@ -328,6 +361,18 @@ class BBPSService {
           operatorTxnId: oprID,
         },
       });
+
+      const commission = new Decimal(transaction.amount).mul(10).div(110);
+      const { adminId } = await getAdminSystemIds();
+
+      await handleCommissionSplit(
+        commission,
+        transaction.user.sponsorId,
+        adminId,
+        `BBPS service commission from user ${transaction.userId} (10% of ₹${transaction.amount}) — callback`,
+        'USER_COMMISSION',
+        transaction.userId
+      );
 
       return { success: true, message: 'Transaction marked as success' };
     }

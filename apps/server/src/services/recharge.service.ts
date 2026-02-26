@@ -3,6 +3,8 @@ import { imwalletAPIService } from './imwallet-api.service';
 import { creditToSpendWallet, deductFromWallet } from './wallet.service';
 import { Prisma } from "@repo/db";
 import { ApiError } from '../utils/ApiError';
+import { handleCommissionSplit } from './scanPay.service';
+import { getAdminSystemIds } from '../utils/system';
 
 const Decimal = Prisma.Decimal;
 
@@ -140,13 +142,15 @@ class RechargeService {
         }
 
         if (normalizedStatus === 'SUCCESS' || normalizedStatus === 'PENDING') {
+            const userCommission = new Decimal(amount).mul(10).div(100)
+            const totalAmt = new Decimal(amount).add(userCommission)
 
             const result = await prisma.$transaction(async (tx) => {
 
                 const walletTxnId = await deductFromWallet(
                     userId,
                     'SPEND',
-                    new Decimal(amount),
+                    totalAmt,
                     `Mobile recharge (${normalizedStatus}) - ${operator.name} - ${mobileNumber}`,
                     'RECHARGE',
                     transaction.id,
@@ -159,10 +163,31 @@ class RechargeService {
                         status: normalizedStatus,
                         walletTransactionId: walletTxnId,
                     },
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                sponsorId: true,
+                            }
+                        }
+                    }
                 });
 
                 return { updatedTransaction };
             });
+
+            if (normalizedStatus === 'SUCCESS') {
+                const { adminId } = await getAdminSystemIds()
+
+                await handleCommissionSplit(
+                    userCommission,
+                    result.updatedTransaction.user.sponsorId,
+                    adminId,
+                    `Mobile recharge commission from user ${userId} — ${operator.name} ${mobileNumber} (10% of ₹${amount})`,
+                    'USER_COMMISSION',
+                    userId
+                );
+            }
 
             return {
                 success: true,
@@ -192,6 +217,11 @@ class RechargeService {
         // Find transaction
         const transaction = await prisma.serviceTransaction.findUnique({
             where: { orderId: orderid },
+            include: {
+                user: {
+                    select: { id: true, sponsorId: true }
+                }
+            }
         });
 
         if (!transaction) {
@@ -220,6 +250,18 @@ class RechargeService {
                 },
             });
 
+            const commission = new Decimal(transaction.amount).mul(10).div(110);
+            const { adminId } = await getAdminSystemIds();
+
+            await handleCommissionSplit(
+                commission,
+                transaction.user.sponsorId,
+                adminId,
+                `Mobile recharge commission from user ${transaction.userId} (10% of ₹${transaction.amount}) — callback`,
+                'USER_COMMISSION',
+                transaction.userId
+            );
+
             return { success: true, message: 'Transaction marked as success' };
         }
 
@@ -231,7 +273,7 @@ class RechargeService {
                     transaction.userId,
                     'SPEND',
                     transaction.amount,
-                    `Refund - Recharge failed (${status})`,
+                    `Refund - Mobile recharge failed — ${transaction.userId} (${status})`,
                     'RECHARGE_REFUND',
                     transaction.id
                 );

@@ -556,3 +556,32 @@ model AutoPayExecution {
   @@index([status])
   @@index([executedAt])
 }
+
+enum OperatorCode {
+  RJ
+  AT
+  VI
+  BT
+  BS
+}
+
+enum RechargeCategory {
+  Unlimited_5g_plans
+  Top_data_packs
+  Monthly_packs
+  Talktime_plans
+  Unlimited
+}
+
+model RechargePlan {
+  id           String           @id @default(cuid())
+  operatorCode OperatorCode
+  category     RechargeCategory
+  amount       Decimal          @db.Decimal(15, 2)
+  data         String
+  calls        String
+  validity     String
+  isActive     Boolean          @default(true) // optional but handy
+  createdAt    DateTime         @default(now()) // optional
+  updatedAt    DateTime         @updatedAt // optional
+}

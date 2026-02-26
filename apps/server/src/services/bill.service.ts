@@ -3,6 +3,7 @@ import { getAdminSystemIds } from '../utils/system';
 import { addToAdminWallet } from './wallet.service';
 import { deleteUploadedFile } from '../controllers/vendor.controller';
 import { ApiError } from '../utils/ApiError';
+import { handleCommissionSplit } from './scanPay.service';
 
 type Decimal = Prisma.Decimal;
 const Decimal = Prisma.Decimal;
@@ -99,7 +100,17 @@ export async function completeBillRequest(billRequestId: string) {
     const { adminId } = await getAdminSystemIds();
 
     const request = await prisma.billRequest.findUnique({
-        where: { id: billRequestId },
+        where: {
+            id: billRequestId
+        },
+        include: {
+            user: {
+                select: {
+                    id: true,
+                    sponsorId: true
+                }
+            }
+        }
     });
     if (!request) throw new ApiError(404, 'Bill request not found');
     if (request.status !== 'PENDING') {
@@ -112,12 +123,13 @@ export async function completeBillRequest(billRequestId: string) {
         data: { status: 'COMPLETED' },
     });
 
-    await addToAdminWallet(
-        adminId,
+    await handleCommissionSplit(
         request.charge,
-        `Bill request service fee from user ${request.userId} (10% of ₹${request.amount})`,
-        'BILL_REQUEST',
-        billRequestId,
+        request.user.sponsorId,
+        adminId,
+        `Bill commission from user ${request.user.id} (10% of ₹${request.amount})`,
+        'USER_COMMISSION',
+        request.user.id
     );
 
     return { message: 'Bill request marked as completed' };

@@ -307,6 +307,7 @@ class IMWalletAPIService {
       throw new ApiError(503, 'Failed to check transaction status. Please try again.');
     }
   }
+  
 }
 
 export const imwalletAPIService = new IMWalletAPIService();

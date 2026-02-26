@@ -12,7 +12,7 @@ const Decimal = Prisma.Decimal;
 
 const USER_COMMISSION_RATE = new Decimal(10);
 
-async function handleCommissionSplit(
+export async function handleCommissionSplit(
   commission: Decimal,
   sponsorId: string | null,
   adminId: string,

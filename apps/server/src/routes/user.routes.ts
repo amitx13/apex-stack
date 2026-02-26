@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { asyncHandler } from '../middlewares/asyncHandler.js';
-import { createNewUserAccount, createNewVendorAccount, fetchMe, getBankDetails, getProfileDetails, getReferralsController, getWalletTransactionsController, getWithdrawalBalance, login, updateUserProfile, userWallerBal } from '../controllers/user.controller.js';
+import { createNewUserAccount, createNewVendorAccount, fetchMe, getBankDetails, getProfileDetails, getRechargePlans, getReferralsController, getWalletTransactionsController, getWithdrawalBalance, login, updateUserProfile, userWallerBal } from '../controllers/user.controller.js';
 import { authMiddleware } from '../middlewares/auth.js';
 import { addBankDetails, generateVendorQR, getSettlements, getVendorByQr, getVendorDailySales, getVendorQR, getVendorTransactionHistory, getVendorWallet, requestInstantSettlement, updateBankDetails, updateProfile, updateVendorComissionRate, vendorWallerBal } from '../controllers/vendor.controller.js';
 import { requireUser, requireUserOrVendor, requireVendor } from '../middlewares/authRoles.js';
@@ -21,6 +21,7 @@ router.get('/getWithdrawalBalance', authMiddleware, requireUser, asyncHandler(ge
 router.get('/wallet/transactions', authMiddleware, requireUser, asyncHandler(getWalletTransactionsController))
 router.get('/referrals', authMiddleware, requireUser, asyncHandler(getReferralsController));
 router.get('/withdrawal', authMiddleware, requireUser, asyncHandler(getWithdrawalDataController));
+router.get('/recharge/plans', authMiddleware, requireUser, asyncHandler(getRechargePlans));
 router.post('/withdrawal/request', authMiddleware, requireUser, asyncHandler(requestWithdrawalController));
 router.get('/bills', authMiddleware, requireUser, asyncHandler(getBillRequestsController));
 router.post('/bills', authMiddleware, requireUser, upload.single('billImage'), processImage, asyncHandler(createBillRequestController));

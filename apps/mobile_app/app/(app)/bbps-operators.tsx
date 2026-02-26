@@ -8,9 +8,24 @@ import { useEffect, useState } from "react";
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Image } from "expo-image";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BBPSOperator, FetchBillResponse, set } from "@repo/types";
+import { BBPSOperator, DisplyBillResponse, FetchBillResponse, set } from "@repo/types";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useBillStore } from "@/store/billStore";
+
+// const data = {
+//     "bill": {
+//         "acceptPayment": true,
+//         "billDate": null,
+//         "billFetchId": "95617274487319",
+//         "billedAmount": 892.5,
+//         "customerName": "Rina Devi",
+//         "dueDate": null,
+//         "partPayment": false,
+//         "payAmount": 892.5
+//     },
+//     "category": "LPG Booking",
+//     "success": true
+// }
 
 
 export default function BBPSOperators() {
@@ -78,16 +93,20 @@ export default function BBPSOperators() {
         try {
             setIsFetchingBill(true);
 
-            const billDetails: FetchBillResponse = await api.post('/bbps/fetch-bill', {
+            const billDetails = await api.post('/bbps/fetch-bill', {
                 category: service,
                 account: inputValue,
                 spkey: selectedOperator?.spkey,
                 operatorName: selectedOperator?.operator,
             });
 
-            if (billDetails.status === 'SUCCESS' && billDetails.data !== undefined) {
+            const responseData: DisplyBillResponse = billDetails.data;
+            console.log(responseData);
 
-                setBillData(billDetails.data);
+            // ✅ Fixed: use success:true instead of status==='SUCCESS'
+            if (responseData?.status === true && responseData?.bill) {
+
+                setBillData(responseData.bill);
                 setAccountDetails({
                     account: inputValue,
                     spkey: selectedOperator.spkey,
@@ -99,8 +118,6 @@ export default function BBPSOperators() {
                     pathname: '/(app)/bill-details',
                 });
 
-            } else {
-                showError('Error during bill fetch', billDetails.msg || 'Failed to fetch bill details');
             }
 
         } catch (error: any) {
@@ -117,33 +134,33 @@ export default function BBPSOperators() {
         }
     };
 
-    const handleContinueDummy = () => {
-        const dummyBillData = {
-            billFetchId: 'TEST123456789ABC',
-            billedamount: '1250.00',
-            dueDate: '25-Feb-2026',
-            billdate: '01-Feb-2026',
-            partPayment: false,
-            payamount: '1250.00',
-            acceptPayment: true,
-            customerName: 'Rajesh Kumar',
-        };
+    // const handleContinueDummy = () => {
+    //     const dummyBillData = {
+    //         billFetchId: 'TEST123456789ABC',
+    //         billedamount: '1250.00',
+    //         dueDate: '25-Feb-2026',
+    //         billdate: '01-Feb-2026',
+    //         partPayment: false,
+    //         payamount: '1250.00',
+    //         acceptPayment: true,
+    //         customerName: 'Rajesh Kumar',
+    //     };
 
-        // Dummy account details
-        const dummyAccountDetails = {
-            account: '9102345445',
-            spkey: '293',
-            operatorName: 'Indane Gas (Indian Oil)',
-            category: 'LPG Booking',
-        };
+    //     // Dummy account details
+    //     const dummyAccountDetails = {
+    //         account: '9102345445',
+    //         spkey: '293',
+    //         operatorName: 'Indane Gas (Indian Oil)',
+    //         category: 'LPG Booking',
+    //     };
 
-        // Use dummy data instead of API response
-        setBillData(dummyBillData);
-        setAccountDetails(dummyAccountDetails);
+    //     // Use dummy data instead of API response
+    //     setBillData(dummyBillData);
+    //     setAccountDetails(dummyAccountDetails);
 
-        // Navigate
-        router.push('/(app)/bill-details');
-    }
+    //     // Navigate
+    //     router.push('/(app)/bill-details');
+    // }
 
     const filteredOperators = operators.filter(operator =>
         operator.operator.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -386,7 +403,7 @@ export default function BBPSOperators() {
                         {/* Bottom Button */}
                         <View className="px-5 pb-6 pt-4 border-t border-border/50">
                             <Pressable
-                                onPress={handleContinueDummy}
+                                onPress={handleContinue}
                                 className={isfetchingBill ? `bg-primary/50 rounded-xl py-3.5 items-center flex-row justify-center gap-2` : `bg-primary rounded-xl py-3.5 items-center flex-row justify-center gap-2 active:opacity-80`}
                                 disabled={isfetchingBill}
                             >{

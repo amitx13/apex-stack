@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { ApiError } from "../utils/ApiError.js";
-import { prisma, TransactionType } from "@repo/db";
+import { OperatorCode, prisma, TransactionType } from "@repo/db";
 import jwt from 'jsonwebtoken';
 import { customAlphabet } from 'nanoid'
 import { getConflictingFields, getReadableFieldName } from "../utils/prismaErrorHelper.js";
@@ -292,26 +292,12 @@ export const fetchMe = async (req: Request, res: Response) => {
                         }
                     }
                 },
-                wallets: {
-                    where: {
-                        type: {
-                            in: ["SPEND", "WITHDRAWAL"]
-                        }
-                    },
-                    select: {
-                        type: true,
-                        balance: true,
-                    }
-                }
             }
         });
 
         if (!user) {
             throw new ApiError(404, "User account not found. Please sign up first.");
         }
-
-        const spendWallet = user.wallets.find((w) => w.type === "SPEND");
-        const withdrawalWallet = user.wallets.find((w) => w.type === "WITHDRAWAL");
 
         // console.log(user)
 
@@ -327,8 +313,6 @@ export const fetchMe = async (req: Request, res: Response) => {
                 gasConsumerNumber: user.gasConsumerNumber,
                 isRegistrationPayment: user.isRegistrationPayment,
                 membersCount: user._count.referredUsers,
-                spendBalance: spendWallet ? spendWallet.balance : 0,
-                withdrawalBalance: withdrawalWallet ? withdrawalWallet.balance : 0,
                 isBankAdded: user.bankDetails !== null
             },
         });
@@ -857,7 +841,7 @@ export async function getUserWalletTransactions({
             case 'AUTOPAY_REFUND':
                 enrichment = null;
                 break;
-            
+
             // RECHARGE & RECHARGE_REFUND handled via serviceTransaction on FE
         }
 
@@ -940,4 +924,44 @@ export async function getUserReferrals(sponsorId: string) {
             total: vendors.length,
         },
     };
+}
+
+const CATEGORY_ORDER = [
+    'Monthly_packs',
+    'Unlimited_5g_plans',
+    'Top_data_packs',
+    'Unlimited',
+    'Talktime_plans',
+];
+
+export async function getRechargePlans(req: Request, res: Response) {
+    const userId = req.user?.userId;
+    if (!userId) throw new ApiError(401, 'Unauthorized');
+
+    const operatorCode = req.query.operatorCode as string | undefined;
+    if (!operatorCode) throw new ApiError(400, 'operatorCode is required');
+
+    const plans = await prisma.rechargePlan.findMany({
+        where: { operatorCode: operatorCode as OperatorCode, isActive: true },
+        orderBy: { amount: 'asc' },
+    });
+
+    const grouped = plans.reduce((acc: Record<string, { title: string; plans: any[] }>, plan) => {
+        const key = plan.category;
+        if (!acc[key]) acc[key] = { title: key.replace(/_/g, ' '), plans: [] };
+        acc[key].plans.push({
+            rs: plan.amount.toString(),
+            data: plan.data,
+            calls: plan.calls,
+            validity: plan.validity,
+        });
+        return acc;
+    }, {});
+
+    // Enforce fixed display order, skip missing categories
+    const sorted = CATEGORY_ORDER
+        .filter((cat) => grouped[cat])
+        .map((cat) => grouped[cat]);
+
+    res.json({ success: true, data: sorted });
 }

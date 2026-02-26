@@ -19,8 +19,6 @@ export interface User extends BaseUser {
   isRegistrationPayment: boolean;
   isGasConsumerVerified: boolean;
   membersCount: number;
-  spendBalance: number;
-  withdrawalBalance: number
   isBankAdded: boolean
 }
 

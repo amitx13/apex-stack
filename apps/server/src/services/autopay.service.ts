@@ -4,6 +4,7 @@ import { Prisma, prisma } from '@repo/db';
 import { addToAdminWallet } from './wallet.service';
 import { ApiError } from '../utils/ApiError';
 import { getAdminSystemIds } from '../utils/system';
+import { handleCommissionSplit } from './scanPay.service';
 
 type Decimal = Prisma.Decimal;
 const Decimal = Prisma.Decimal;
@@ -11,7 +12,7 @@ const Decimal = Prisma.Decimal;
 const CHARGE_RATE = new Decimal(10);
 
 function calcFees(amount: Decimal) {
-    const charge     = amount.mul(CHARGE_RATE).div(100);
+    const charge = amount.mul(CHARGE_RATE).div(100);
     const totalDebit = amount.add(charge);
     return { charge, totalDebit };
 }
@@ -21,13 +22,13 @@ export async function createAutoPay(
     userId: string,
     data: {
         beneficiaryName: string;
-        bankName:        string;
-        accountNumber:   string;
-        ifscCode:        string;
-        upiId?:          string;
-        amount:          number;
-        dueDate:         'FIVE' | 'TEN' | 'FIFTEEN';
-        category:        'RENT' | 'SCHOOL' | 'COLLEGE' | 'EMI' | 'TUITION';
+        bankName: string;
+        accountNumber: string;
+        ifscCode: string;
+        upiId?: string;
+        amount: number;
+        dueDate: 'FIVE' | 'TEN' | 'FIFTEEN';
+        category: 'RENT' | 'SCHOOL' | 'COLLEGE' | 'EMI' | 'TUITION';
     }
 ) {
     const amountDecimal = new Decimal(data.amount);
@@ -43,14 +44,14 @@ export async function createAutoPay(
         data: {
             userId,
             beneficiaryName: data.beneficiaryName,
-            bankName:        data.bankName,
-            accountNumber:   data.accountNumber,
-            ifscCode:        data.ifscCode.toUpperCase(),
-            upiId:           data.upiId || null,
-            amount:          amountDecimal,
-            dueDate:         data.dueDate,
-            category:        data.category,
-            status:          'PENDING_APPROVAL',
+            bankName: data.bankName,
+            accountNumber: data.accountNumber,
+            ifscCode: data.ifscCode.toUpperCase(),
+            upiId: data.upiId || null,
+            amount: amountDecimal,
+            dueDate: data.dueDate,
+            category: data.category,
+            status: 'PENDING_APPROVAL',
         },
     });
 }
@@ -61,28 +62,28 @@ export async function getUserAutoPays(userId: string) {
         where: { userId },
         orderBy: { createdAt: 'desc' },
         select: {
-            id:              true,
+            id: true,
             beneficiaryName: true,
-            bankName:        true,
-            accountNumber:   true,
-            ifscCode:        true,
-            upiId:           true,
-            amount:          true,
-            dueDate:         true,
-            category:        true,
-            status:          true,
-            createdAt:       true,
-            updatedAt:       true,
+            bankName: true,
+            accountNumber: true,
+            ifscCode: true,
+            upiId: true,
+            amount: true,
+            dueDate: true,
+            category: true,
+            status: true,
+            createdAt: true,
+            updatedAt: true,
             executions: {
                 orderBy: { executedAt: 'desc' },
                 take: 3,
                 select: {
-                    id:          true,
-                    amount:      true,
-                    charge:      true,
-                    totalDebit:  true,
-                    status:      true,
-                    executedAt:  true,
+                    id: true,
+                    amount: true,
+                    charge: true,
+                    totalDebit: true,
+                    status: true,
+                    executedAt: true,
                 },
             },
         },
@@ -92,42 +93,42 @@ export async function getUserAutoPays(userId: string) {
 // ── User: Pause ───────────────────────────────────────────────────────────────
 export async function pauseAutoPay(userId: string, autoPayId: string) {
     const autoPay = await prisma.autoPay.findUnique({ where: { id: autoPayId } });
-    if (!autoPay)                  throw new ApiError(404, 'AutoPay not found');
+    if (!autoPay) throw new ApiError(404, 'AutoPay not found');
     if (autoPay.userId !== userId) throw new ApiError(403, 'Unauthorized');
     if (autoPay.status !== 'ACTIVE') {
         throw new ApiError(400, `Cannot pause an autopay with status ${autoPay.status}`);
     }
     return prisma.autoPay.update({
         where: { id: autoPayId },
-        data:  { status: 'PAUSED' },
+        data: { status: 'PAUSED' },
     });
 }
 
 // ── User: Resume ──────────────────────────────────────────────────────────────
 export async function resumeAutoPay(userId: string, autoPayId: string) {
     const autoPay = await prisma.autoPay.findUnique({ where: { id: autoPayId } });
-    if (!autoPay)                  throw new ApiError(404, 'AutoPay not found');
+    if (!autoPay) throw new ApiError(404, 'AutoPay not found');
     if (autoPay.userId !== userId) throw new ApiError(403, 'Unauthorized');
     if (autoPay.status !== 'PAUSED') {
         throw new ApiError(400, `Cannot resume an autopay with status ${autoPay.status}`);
     }
     return prisma.autoPay.update({
         where: { id: autoPayId },
-        data:  { status: 'ACTIVE' },
+        data: { status: 'ACTIVE' },
     });
 }
 
 // ── User: Cancel ──────────────────────────────────────────────────────────────
 export async function cancelAutoPay(userId: string, autoPayId: string) {
     const autoPay = await prisma.autoPay.findUnique({ where: { id: autoPayId } });
-    if (!autoPay)                  throw new ApiError(404, 'AutoPay not found');
+    if (!autoPay) throw new ApiError(404, 'AutoPay not found');
     if (autoPay.userId !== userId) throw new ApiError(403, 'Unauthorized');
     if (autoPay.status === 'CANCELLED') {
         throw new ApiError(400, 'AutoPay is already cancelled');
     }
     return prisma.autoPay.update({
         where: { id: autoPayId },
-        data:  { status: 'CANCELLED' },
+        data: { status: 'CANCELLED' },
     });
 }
 
@@ -140,7 +141,7 @@ export async function approveAutoPay(autoPayId: string) {
     }
     return prisma.autoPay.update({
         where: { id: autoPayId },
-        data:  { status: 'ACTIVE' },
+        data: { status: 'ACTIVE' },
     });
 }
 
@@ -153,7 +154,7 @@ export async function rejectAutoPay(autoPayId: string) {
     }
     return prisma.autoPay.update({
         where: { id: autoPayId },
-        data:  { status: 'REJECTED' },
+        data: { status: 'REJECTED' },
     });
 }
 
@@ -162,20 +163,29 @@ export async function completeAutoPayExecution(executionId: string) {
     const { adminId } = await getAdminSystemIds();
 
     const execution = await prisma.autoPayExecution.findUnique({
-        where:   { id: executionId },
-        include: { autoPay: true },
+        where: { id: executionId },
+        include: {
+            autoPay: true,
+            user: {
+                select: {
+                    id: true,
+                    sponsorId: true
+                }
+            }
+        },
     });
     if (!execution) throw new ApiError(404, 'Execution not found');
     if (execution.status !== 'SUCCESS') {
         throw new ApiError(400, 'Only SUCCESS executions can be completed');
     }
 
-    await addToAdminWallet(
-        adminId,
+    await handleCommissionSplit(
         execution.charge,
-        `AutoPay fee — ${execution.autoPay.beneficiaryName} (10% of ₹${execution.amount})`,
-        'AUTOPAY',
-        executionId,
+        execution.user.sponsorId,
+        adminId,
+        `AutoPay commission — ${execution.autoPay.beneficiaryName} (10% of ₹${execution.amount})`,
+        'USER_COMMISSION',
+        execution.user.id
     );
 
     return { message: 'AutoPay execution completed' };
@@ -184,7 +194,7 @@ export async function completeAutoPayExecution(executionId: string) {
 // ── Admin: Reject execution + refund ─────────────────────────────────────────
 export async function rejectAutoPayExecution(executionId: string) {
     const execution = await prisma.autoPayExecution.findUnique({
-        where:   { id: executionId },
+        where: { id: executionId },
         include: {
             autoPay: true,
             user: {
@@ -203,24 +213,24 @@ export async function rejectAutoPayExecution(executionId: string) {
     await prisma.$transaction(async (tx) => {
         const updatedWallet = await tx.wallet.update({
             where: { id: spendWallet.id },
-            data:  { balance: { increment: execution.totalDebit } },
+            data: { balance: { increment: execution.totalDebit } },
         });
 
         await tx.walletTransaction.create({
             data: {
-                userId:        execution.userId,
-                walletId:      updatedWallet.id,
-                type:          'CREDIT',
-                points:        execution.totalDebit,
-                description:   `AutoPay refund — ${execution.autoPay.beneficiaryName} (₹${execution.totalDebit})`,
+                userId: execution.userId,
+                walletId: updatedWallet.id,
+                type: 'CREDIT',
+                points: execution.totalDebit,
+                description: `AutoPay refund — ${execution.autoPay.beneficiaryName} (₹${execution.totalDebit})`,
                 referenceType: 'AUTOPAY_REFUND',
-                referenceId:   executionId,
+                referenceId: executionId,
             },
         });
 
         await tx.autoPayExecution.update({
             where: { id: executionId },
-            data:  { status: 'FAILED' },
+            data: { status: 'FAILED' },
         });
     });
 
@@ -248,12 +258,12 @@ export async function runAutoPayCron(dueDate: 'FIVE' | 'TEN' | 'FIFTEEN') {
             if (!spendWallet || spendWallet.balance.lt(totalDebit)) {
                 await prisma.autoPayExecution.create({
                     data: {
-                        autoPayId:  autoPay.id,
-                        userId:     autoPay.userId,
-                        amount:     autoPay.amount,
+                        autoPayId: autoPay.id,
+                        userId: autoPay.userId,
+                        amount: autoPay.amount,
                         charge,
                         totalDebit,
-                        status:     'INSUFFICIENT',
+                        status: 'INSUFFICIENT',
                     },
                 });
                 results.insufficient++;
@@ -261,36 +271,36 @@ export async function runAutoPayCron(dueDate: 'FIVE' | 'TEN' | 'FIFTEEN') {
                 await prisma.$transaction(async (tx) => {
                     const updatedWallet = await tx.wallet.update({
                         where: { id: spendWallet.id },
-                        data:  { balance: { decrement: totalDebit } },
+                        data: { balance: { decrement: totalDebit } },
                     });
 
                     const walletTxn = await tx.walletTransaction.create({
                         data: {
-                            userId:        autoPay.userId,
-                            walletId:      updatedWallet.id,
-                            type:          'DEBIT',
-                            points:        totalDebit,
-                            description:   `AutoPay — ${autoPay.beneficiaryName} (₹${autoPay.amount} + 10% fee ₹${charge})`,
+                            userId: autoPay.userId,
+                            walletId: updatedWallet.id,
+                            type: 'DEBIT',
+                            points: totalDebit,
+                            description: `AutoPay — ${autoPay.beneficiaryName} (₹${autoPay.amount} + 10% fee ₹${charge})`,
                             referenceType: 'AUTOPAY',
-                            referenceId:   autoPay.id,
+                            referenceId: autoPay.id,
                         },
                     });
 
                     const execution = await tx.autoPayExecution.create({
                         data: {
-                            autoPayId:           autoPay.id,
-                            userId:              autoPay.userId,
-                            amount:              autoPay.amount,
+                            autoPayId: autoPay.id,
+                            userId: autoPay.userId,
+                            amount: autoPay.amount,
                             charge,
                             totalDebit,
-                            status:              'SUCCESS',
+                            status: 'SUCCESS',
                             walletTransactionId: walletTxn.id,
                         },
                     });
 
                     await tx.walletTransaction.update({
                         where: { id: walletTxn.id },
-                        data:  { referenceId: execution.id },
+                        data: { referenceId: execution.id },
                     });
                 });
 
@@ -301,12 +311,12 @@ export async function runAutoPayCron(dueDate: 'FIVE' | 'TEN' | 'FIFTEEN') {
             console.error(`AutoPay ${autoPay.id} failed:`, error);
             await prisma.autoPayExecution.create({
                 data: {
-                    autoPayId:  autoPay.id,
-                    userId:     autoPay.userId,
-                    amount:     autoPay.amount,
-                    charge:     new Decimal(0),
+                    autoPayId: autoPay.id,
+                    userId: autoPay.userId,
+                    amount: autoPay.amount,
+                    charge: new Decimal(0),
                     totalDebit: new Decimal(0),
-                    status:     'FAILED',
+                    status: 'FAILED',
                 },
             });
             results.failed++;

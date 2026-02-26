@@ -182,7 +182,7 @@ export default function HomeScreen() {
       fetchUserDetails()
     }
   };
-  
+
   const initiateMobileRecharge = async () => {
     if (!user?.isActive) {
       showWarning('Account Inactive', 'Please activate your account to access this feature.');
@@ -201,10 +201,12 @@ export default function HomeScreen() {
     }
   };
 
-  const handleOperatorSelected = async (mobileNumber: string, operator: Operator) => {
-    try {
-      // TODO: Fetch plans from backend
-      // Navigate to plans screen with data
+  const handleOperatorSelected = (mobileNumber: string, operator: Operator) => {
+    setShowOperatorModal(false);
+    // Small delay lets the modal animate out before the new screen mounts
+    // Avoids janky simultaneous close + push
+    setTimeout(() => {
+      setOperators(null);
       router.push({
         pathname: '/(app)/recharge-plans',
         params: {
@@ -213,13 +215,7 @@ export default function HomeScreen() {
           operatorCode: operator.code,
         },
       });
-      setShowOperatorModal(false);
-    } catch (error: any) {
-      showError('Error', 'Failed to load plans. Please try again.');
-    } finally {
-      setShowOperatorModal(false);
-      setOperators(null);
-    }
+    }, 250);
   };
 
   const handleBBPSOperatorSelected = async (service: string) => {
@@ -246,7 +242,6 @@ export default function HomeScreen() {
       params: { name: user?.name }
     });
   }
-
 
   const handleGetWalletBallance = async () => {
     if (!user?.isActive) {
