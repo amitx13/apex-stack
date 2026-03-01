@@ -58,11 +58,11 @@ export default function BBPSOperators() {
             if (response.data.success) {
                 setOperators(response.data.data);
             } else {
-                console.error('Failed to load operators:', response.data);
+                // console.error('Failed to load operators:', response.data);
                 showError('Error', response.data.message || 'Failed to load operators');
             }
         } catch (error: any) {
-            console.error('Failed to load operators:', error);
+            // console.error('Failed to load operators:', error);
             showError('Error', error.response?.data?.message || 'Failed to load operators');
         } finally {
             setLoading(false);
@@ -101,7 +101,7 @@ export default function BBPSOperators() {
             });
 
             const responseData: DisplyBillResponse = billDetails.data;
-            console.log(responseData);
+            // console.log(responseData);
 
             // ✅ Fixed: use success:true instead of status==='SUCCESS'
             if (responseData?.status === true && responseData?.bill) {
@@ -121,7 +121,7 @@ export default function BBPSOperators() {
             }
 
         } catch (error: any) {
-            console.log("error:", error)
+            // console.log("error:", error)
             if (error.response?.data?.message) {
                 showError('Error during bill fetch', error.response?.data?.message || 'Failed to fetch bill details');
             } else if (error.message) {

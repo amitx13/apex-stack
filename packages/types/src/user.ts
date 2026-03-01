@@ -1,10 +1,4 @@
 import { z } from "zod"
-
-enum Role {
-  "USER",
-  "VENDOR"
-}
-
 export interface BaseUser {
   id: string;
   name: string;

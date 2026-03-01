@@ -19,8 +19,8 @@ export const errorHandler = (
   // 1. Log everything in development
   // ---------------------------
   if (process.env.NODE_ENV !== "production") {
-    console.error("🔥 Error caught in handler:");
-    console.error(err);
+    // console.error("🔥 Error caught in handler:");
+    // console.error(err);
   }
 
   // ---------------------------

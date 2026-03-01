@@ -2,7 +2,7 @@
 
 import { Request, Response } from 'express';
 import { ApiError } from '../utils/ApiError';
-import { completeBillRequest, createBillRequest, getUserBillRequests, rejectBillRequest } from '../services/bill.service';
+import { createBillRequest, getUserBillRequests } from '../services/bill.service';
 import { deleteUploadedFile } from './vendor.controller';
 
 // ── User: Get all bill requests ────────────────────────────────────────────────
@@ -53,37 +53,5 @@ export async function createBillRequestController(req: Request, res: Response) {
         success: true,
         data: result,
         message: 'Bill request created successfully'
-    })
-}
-
-// ── Admin: Complete bill request ───────────────────────────────────────────────
-export async function completeBillRequestController(req: Request, res: Response) {
-
-    const billRequestId = req.params.billRequestId as string;
-
-    if (!billRequestId) throw new ApiError(400, 'Bill request ID is required');
-
-    const result = await completeBillRequest(billRequestId);
-
-    res.status(200).json({
-        success: true,
-        data: result,
-        message: 'Bill request completed successfully'
-    })
-}
-
-// ── Admin: Reject bill request ─────────────────────────────────────────────────
-export async function rejectBillRequestController(req: Request, res: Response) {
-
-    const billRequestId = req.params.billRequestId as string;
-
-    if (!billRequestId) throw new ApiError(400, 'Bill request ID is required');
-
-    const result = await rejectBillRequest(billRequestId);
-
-    res.status(200).json({
-        success: true,
-        data: result,
-        message: 'Bill request rejected successfully'
     })
 }

@@ -1,4 +1,4 @@
-import { prisma } from '@repo/db';
+import { prisma, PrismaClient } from '@repo/db';
 import { MLM_CONFIG } from '../config/mlm.constants';
 import { ApiError } from '../utils/ApiError';
 
@@ -7,128 +7,129 @@ const MAX_CHILDREN = MLM_CONFIG.MATRIX_WIDTH;
 /**
  * Find next available position in 5x5 forced matrix using BFS
  */
-export async function findNextAvailablePosition(): Promise<{
-  parentAccountId: string;
-  matrixPosition: number;
-}> {
-  // Get root account (admin at position 0)
-  const rootAccount = await prisma.userAccount.findFirst({
+export type PrismaTransactionClient = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>;
+
+export async function findNextAvailablePosition(
+  tx?: PrismaTransactionClient  // ← add this
+): Promise<{ parentAccountId: string; matrixPosition: number }> {
+
+  const client = tx || prisma;  // ← use tx if provided
+
+  const rootAccount = await client.userAccount.findFirst({
     where: { matrixPosition: 0 },
   });
 
   if (!rootAccount) {
-    throw new ApiError(404,
-      'Root account (admin) not found. Please run initialize-admin script first.'
-    );
+    throw new ApiError(404, 'Root account (admin) not found.');
   }
 
-  // BFS queue - Start with root
   const queue: string[] = [rootAccount.id];
   const visited = new Set<string>();
 
   while (queue.length > 0) {
     const currentAccountId = queue.shift()!;
-
-    // Skip if already visited
     if (visited.has(currentAccountId)) continue;
     visited.add(currentAccountId);
 
-    // Get current account with children
-    const currentAccount = await prisma.userAccount.findUnique({
+    const currentAccount = await client.userAccount.findUnique({
       where: { id: currentAccountId },
       include: { children: true },
     });
 
     if (!currentAccount) continue;
 
-    // Check if this account has space for more children (< 5)
     if (currentAccount.children.length < MAX_CHILDREN) {
-      // Found available spot!
-      const newPosition = await getNextSequentialPosition();
-
-      console.log(
-        `✅ Found available position: ${newPosition} under account ${currentAccountId} (current position: ${currentAccount.matrixPosition})`
-      );
-
-      return {
-        parentAccountId: currentAccount.id,
-        matrixPosition: newPosition,
-      };
+      const newPosition = await getNextSequentialPosition(client);  // ← pass client
+      console.log(`✅ Found available position: ${newPosition} under account ${currentAccountId}`);
+      return { parentAccountId: currentAccount.id, matrixPosition: newPosition };
     }
 
-    // No space - add all children to queue (go deeper)
     for (const child of currentAccount.children) {
       queue.push(child.id);
     }
   }
 
-  throw new ApiError(404, 'BFS traversal completed without finding available position');
+  throw new ApiError(404, 'No available position found');
 }
 
-/**
- * Get next sequential position number
- */
-async function getNextSequentialPosition(): Promise<number> {
-  const lastAccount = await prisma.userAccount.findFirst({
+async function getNextSequentialPosition(
+  client: PrismaTransactionClient  // ← use passed client
+): Promise<number> {
+  const lastAccount = await client.userAccount.findFirst({
     orderBy: { matrixPosition: 'desc' },
     select: { matrixPosition: true },
   });
-
   return lastAccount ? lastAccount.matrixPosition + 1 : 1;
 }
 
 /**
  * Get upline chain for commission distribution (up to 15 levels)
  */
+type ParentAccount = {
+  id: string;
+  userId: string;
+  matrixPosition: number;
+  parentAccountId: string | null;
+  user: { id: string; role: string };
+};
+
 export async function getUplineChain(
   userAccountId: string,
-  maxLevels: number = MLM_CONFIG.MAX_UPLINE_LEVELS
-): Promise<
-  {
+  maxLevels: number = MLM_CONFIG.MAX_UPLINE_LEVELS,
+  tx?: PrismaTransactionClient  // ← add this
+): Promise<{
+  userId: string;
+  accountId: string;
+  level: number;
+  matrixPosition: number;
+  isAdmin: boolean;
+}[]> {
+  const client = tx || prisma;  // ← use tx if provided
+
+  const uplineChain: {
     userId: string;
     accountId: string;
     level: number;
     matrixPosition: number;
     isAdmin: boolean;
-  }[]
-> {
-  const uplineChain: any[] = [];
+  }[] = [];
 
-  let currentAccount = await prisma.userAccount.findUnique({
+  const startAccount = await client.userAccount.findUnique({
     where: { id: userAccountId },
-    include: {
-      parent: {
-        include: {
-          user: { select: { id: true, role: true } },
-        },
-      },
-    },
+    select: { parentAccountId: true },
   });
 
+  if (!startAccount?.parentAccountId) {
+    console.log(`Account ${userAccountId} has no parent — top of tree`);
+    return [];
+  }
+
+  let currentParentId: string | null = startAccount.parentAccountId;
   let level = 1;
 
-  // Traverse up the tree
-  while (currentAccount?.parent && level <= maxLevels) {
-    uplineChain.push({
-      userId: currentAccount.parent.userId,
-      accountId: currentAccount.parent.id,
-      level: level,
-      matrixPosition: currentAccount.parent.matrixPosition,
-      isAdmin: currentAccount.parent.user.role === 'ADMIN',
-    });
-
-    // Move up one level
-    currentAccount = await prisma.userAccount.findUnique({
-      where: { id: currentAccount.parentAccountId! },
-      include: {
-        parent: {
-          include: {
-            user: { select: { id: true, role: true } },
-          },
-        },
+  while (currentParentId && level <= maxLevels) {
+    const parentAccount: ParentAccount | null = await client.userAccount.findUnique({
+      where: { id: currentParentId },
+      select: {
+        id: true,
+        userId: true,
+        matrixPosition: true,
+        parentAccountId: true,
+        user: { select: { id: true, role: true } },
       },
     });
 
+    if (!parentAccount) break;
+
+    uplineChain.push({
+      userId: parentAccount.userId,
+      accountId: parentAccount.id,
+      level,
+      matrixPosition: parentAccount.matrixPosition,
+      isAdmin: parentAccount.user.role === 'ADMIN',
+    });
+
+    currentParentId = parentAccount.parentAccountId;
     level++;
   }
 

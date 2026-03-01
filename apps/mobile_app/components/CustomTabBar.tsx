@@ -25,7 +25,7 @@ export function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   const { showWarning } = useMessage();
 
   const currentRoute = state.routes[state.index].name;
-  const hideTabBarScreens = ['spendwallet', 'withdrawalwallet', 'userBank','referrals','bills'];
+  const hideTabBarScreens = ['spendwallet', 'withdrawalwallet', 'userBank','referrals','bills','payment'];
   if (hideTabBarScreens.includes(currentRoute)) return null;
 
   const visibleRoutes = state.routes.filter(r =>

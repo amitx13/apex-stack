@@ -23,7 +23,6 @@ type WalletData = {
 type Settlement = {
     id: string;
     pointsRequested: number;
-    amountTransferred: number | null;
     transactionRef: string | null;
     status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'COMPLETED';
     settledAt: string | null;
@@ -266,14 +265,6 @@ export default function SettlementScreen() {
 
                                     {/* Details */}
                                     <View className="px-4 py-3" style={{ gap: 6 }}>
-                                        {item.amountTransferred && (
-                                            <View className="flex-row items-center justify-between">
-                                                <Text className="text-muted-foreground text-[11px]">Amount Transferred</Text>
-                                                <Text className="text-green-400 text-[11px] font-bold">
-                                                    ₹{Number(item.amountTransferred).toFixed(2)}
-                                                </Text>
-                                            </View>
-                                        )}
                                         {item.transactionRef && (
                                             <View className="flex-row items-center justify-between">
                                                 <Text className="text-muted-foreground text-[11px]">Transaction Ref</Text>

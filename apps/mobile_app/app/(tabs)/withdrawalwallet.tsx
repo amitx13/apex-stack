@@ -20,7 +20,7 @@ import { User } from '@repo/types';
 import { useAuthStore } from '@/store/authStore';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-type WithdrawalStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'COMPLETED';
+type WithdrawalStatus = 'PENDING' | 'REJECTED' | 'COMPLETED';
 
 type WithdrawalRequest = {
     id: string;
@@ -51,7 +51,6 @@ const STATUS_CONFIG: Record<WithdrawalStatus, {
     color: string; bg: string; border: string; label: string;
 }> = {
     PENDING: { color: '#FB923C', bg: 'rgba(251,146,60,0.12)', border: 'rgba(251,146,60,0.25)', label: 'Pending' },
-    APPROVED: { color: '#60A5FA', bg: 'rgba(96,165,250,0.12)', border: 'rgba(96,165,250,0.25)', label: 'Approved' },
     COMPLETED: { color: '#34D399', bg: 'rgba(52,211,153,0.12)', border: 'rgba(52,211,153,0.25)', label: 'Completed' },
     REJECTED: { color: '#F87171', bg: 'rgba(248,113,113,0.12)', border: 'rgba(248,113,113,0.25)', label: 'Rejected' },
 };

@@ -42,7 +42,7 @@ export const processImage: RequestHandler = async (req, res, next) => {
 
         next();
     } catch (err) {
-        console.error('Image processing error:', err);
+        // console.error('Image processing error:', err);
         return res.status(500).json({
             success: false,
             message: "Error processing image"

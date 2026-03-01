@@ -23,6 +23,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
+import { getImageUrl } from '@/lib/getImage';
 
 
 type BankDetails = {
@@ -114,8 +115,6 @@ export default function BankDetailsScreen() {
         }, [])
     );
 
-    const getImageUrl = (path: string): string => `http://192.168.31.185:3000${path}`;
-
     const handleOpenEdit = () => {
         if (!bankDetails) return;
         setEditForm({
@@ -193,7 +192,7 @@ export default function BankDetailsScreen() {
                 setEditForm(p => ({ ...p, qrCode: result.assets[0].uri }));
             }
         } catch (error) {
-            console.error('Image picker error:', error);
+            // console.error('Image picker error:', error);
             showError('Error', 'Failed to pick image. Please try again.');
         }
     };

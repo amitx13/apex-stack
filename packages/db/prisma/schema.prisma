@@ -36,7 +36,6 @@ enum TransactionType {
 
 enum WithdrawalStatus {
   PENDING
-  APPROVED
   REJECTED
   COMPLETED
 }
@@ -235,6 +234,8 @@ model BillRequest {
 enum ReferenceType {
   REGISTRATION /* userAccount Id */
   REENTRY /* newly created UserAccount Id  */
+  REGISTRATION_PROFIT
+  REENTRY_PROFIT
   REENTRY_DEBIT /* noo need to show any name since it's a debit trxn for re-entry */
   VENDOR_COMMISSION /* vendorId */
   USER_COMMISSION /* userId */
@@ -247,6 +248,7 @@ enum ReferenceType {
   BILL_REFUND // credit when rejected
   AUTOPAY
   AUTOPAY_REFUND
+  ADMIN_ADJUSTMENT
 }
 
 model WalletTransaction {
@@ -306,9 +308,11 @@ model Payment {
   status PaymentStatus @default(PENDING)
 
   // Paytm details
-  orderId       String  @unique
-  transactionId String? @unique
-  paytmResponse Json?
+  orderId         String  @unique
+  transactionId   String? @unique
+  screenshot      String?
+  rejectionReason String?
+  // paytmResponse Json?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -462,10 +466,9 @@ model VendorWithdrawalRequest {
   vendorId        String
   pointsRequested Decimal @db.Decimal(15, 2)
 
-  status            WithdrawalStatus @default(PENDING)
-  amountTransferred Decimal?         @db.Decimal(15, 2) //amt transfered
-  transactionRef    String? // admin field
-  settledAt         DateTime?
+  status         WithdrawalStatus @default(PENDING)
+  transactionRef String? // admin field
+  settledAt      DateTime?
 
   vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
 
@@ -478,7 +481,6 @@ model VendorWithdrawalRequest {
 
 enum AutoPayStatus {
   PENDING_APPROVAL
-  APPROVED
   ACTIVE
   PAUSED
   CANCELLED
@@ -501,6 +503,7 @@ enum AutoPayCategory {
 
 enum AutoPayExecutionStatus {
   SUCCESS // deducted + bill generated
+  COMPLETED
   INSUFFICIENT // skipped — not enough balance
   FAILED // unexpected error
 }

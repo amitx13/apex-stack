@@ -18,6 +18,7 @@ import { useMessage } from '@/contexts/MessageContext';
 import { api } from '@/lib/axios';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import * as ImagePicker from 'expo-image-picker';
+import { getImageUrl } from '@/lib/getImage';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type BillStatus = 'PENDING' | 'COMPLETED' | 'REJECTED';
@@ -197,9 +198,6 @@ export default function BillsScreen() {
             setIsSubmitting(false);
         }
     };
-
-    const getImageUrl = (path: string): string => `http://192.168.31.185:3000${path}`;
-
 
     // ─────────────────────────────────────────────────────────────────────────
     return (

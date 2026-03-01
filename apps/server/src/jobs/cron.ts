@@ -50,7 +50,12 @@ export function startSettlementCron() {
 }
 
 export function startAutopayCorn() {
-  cron.schedule('30 3 5,10,15 * *', async () => {
+
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  const schedule = isProduction ? '30 3 5,10,15 * *' : '*/5 * * * *';
+
+  cron.schedule(schedule, async () => {
     const today = new Date();
     const date = today.getDate();
 

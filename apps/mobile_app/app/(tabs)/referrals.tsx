@@ -469,6 +469,10 @@ export default function ReferralsScreen() {
         setRefreshing(false);
     }, []);
 
+    if(!user){
+        return
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     return (
         <Screen hasTabBar={false}>
@@ -511,7 +515,7 @@ export default function ReferralsScreen() {
                     contentContainerStyle={{ paddingBottom: 100 }}
                 >
                     {/* ✅ Logged-in user's own referral code — always visible */}
-                    <ReferralCodeCard code={user.code} name={user.name} />
+                    <ReferralCodeCard code={user?.code} name={user?.name} />
 
                     {/* Tabs */}
                     <View style={{

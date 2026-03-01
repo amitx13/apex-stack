@@ -2,7 +2,7 @@
 
 import { EntryType } from '@repo/db';
 import { MLM_CONFIG } from '../config/mlm.constants';
-import { getUplineChain, getAdminUserId } from './matrix.service';
+import { getUplineChain, getAdminUserId, PrismaTransactionClient } from './matrix.service';
 import { distributeTo3Wallets, addToAdminWallet } from './wallet.service';
 
 const COMMISSION_STRUCTURE = MLM_CONFIG.COMMISSION_STRUCTURE;
@@ -13,12 +13,13 @@ const UPLINE_DISTRIBUTION = MLM_CONFIG.UPLINE_DISTRIBUTION;
  */
 export async function distributeCommission(
   newUserAccountId: string,
-  entryType: EntryType
+  entryType: EntryType,
+  tx?: PrismaTransactionClient
 ) {
   console.log(`\n🎯 Starting commission distribution for account ${newUserAccountId}`);
 
   // Get upline chain (up to 15 levels)
-  const uplineChain = await getUplineChain(newUserAccountId, 15);
+  const uplineChain = await getUplineChain(newUserAccountId, 15, tx);
 
   console.log(`Found ${uplineChain.length} uplines in chain`);
 
@@ -70,6 +71,21 @@ export async function distributeCommission(
         `✅ Level ${upline.level}: ${levelPoints} points → User ${upline.userId}`
       );
     }
+  }
+
+  const TOTAL_DEDUCTED = entryType === 'REENTRY' ? 163 : 199;
+  const remainder = TOTAL_DEDUCTED - totalDistributed;
+
+  if (remainder > 0) {
+    const adminId = await getAdminUserId();
+    await addToAdminWallet(
+      adminId,
+      remainder,
+      `Company profit from ${entryType}`,
+      entryType === 'REENTRY' ? 'REENTRY_PROFIT' : 'REGISTRATION_PROFIT',
+      newUserAccountId,
+    );
+    console.log(`✅ Admin profit: ${remainder} pts → WITHDRAWAL wallet (${entryType} remainder)`);
   }
 
   // Summary

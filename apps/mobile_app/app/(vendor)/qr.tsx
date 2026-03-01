@@ -22,6 +22,7 @@ import { Vendor } from '@repo/types';
 import ViewShot, { captureRef } from 'react-native-view-shot';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
+import { getImageUrl } from '@/lib/getImage';
 
 export default function ShowQRScreen() {
     const router = useRouter();
@@ -58,8 +59,6 @@ export default function ShowQRScreen() {
         await fetchQRData(true);
         setRefreshing(false);
     }, []);
-
-    const getImageUrl = (path: string) => `http://192.168.31.185:3000/${path}`;
 
     const captureCard = async (): Promise<string> => {
         const uri = await captureRef(cardRef, {

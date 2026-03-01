@@ -5,22 +5,39 @@ import morgan from "morgan";
 import path from "path";
 import { errorHandler } from "./middlewares/errorHandler.js";
 import userRoutes from "./routes/user.routes.js";
+import adminRoutes from "./routes/admin.routes.js";
 import autopay from "./routes/autopay.routes.js";
 import paymentRoutes from './routes/payment.routes.js'
 import rechargeRoutes from "./routes/recharge.routes.js"
-import bbpsRoutes from  "./routes/bbps.routes.js"
-import { startReentryCron, startSettlementCron } from "./jobs/cron.js";
-import { imwalletAPIService } from "./services/imwallet-api.service.js";
-import axios from "axios";
-import { imwalletConfig } from "./config/imwallet.config.js";
+import bbpsRoutes from "./routes/bbps.routes.js"
+import { startAutopayCorn, startReentryCron, startSettlementCron } from "./jobs/cron.js";
+import cookieParser from "cookie-parser";
 
 dotenv.config();
 
 const app = express();
-app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(morgan("dev")); 
+app.use(morgan("dev"));
+
+const allowedOrigins = [
+  'http://192.168.31.185:5173/',
+  'http://192.168.31.185:8081'
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, origin);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
+
+app.use(cookieParser());
+
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
@@ -28,47 +45,22 @@ app.get("/health", (_req, res) => {
 
 app.use('/api/v1', userRoutes);
 app.use('/api/v1', autopay);
-app.use('/api/v1/payment', paymentRoutes); 
+app.use('/api/v1/payment', paymentRoutes);
 app.use('/api/v1/recharge', rechargeRoutes);
 app.use('/api/v1/bbps', bbpsRoutes)
+
+app.use('/api/v1/admin', adminRoutes)
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 
-// Temporary route to check IMWallet balance
-// app.get('/api/v1/imwallet/balance', async (_req, res) => {
-//     try {
-//         const balance = await imwalletAPIService.checkBalance();
-//         res.json({ success: true, balance });
-//     } catch (error: any) {
-//         console.error('Error fetching IMWallet balance:', error.message);
-//         res.status(500).json({ success: false, message: 'Failed to fetch IMWallet balance' });
-//     }
-// });
-
-// app.get('/api/v1/checkRechargeStatus/:orderId', async (req, res) => {
-//     const { orderId } = req.params;
-
-//     try {
-//         const result = await imwalletAPIService.checkRechargeStatus({
-//           orderId:orderId,
-//           dot: new Date().toISOString().split('T')[0],
-//         });
-//         res.json({ success: true, data: result });
-//     } catch (error: any) {
-//         console.error('Error checking recharge status:', error.message);
-//         res.status(500).json({ success: false, message: 'Failed to check recharge status' });
-//     }
-// });
-
-
-/* ---------- ERROR HANDLER (LAST) ---------- */
-app.use(errorHandler);
-
 // startReentryCron()
 // startSettlementCron()
+//startAutopayCorn()
+
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+console.log(`🚀 Server running on http://localhost:${PORT}`);
 });

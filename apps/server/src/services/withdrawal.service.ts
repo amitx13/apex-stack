@@ -1,10 +1,7 @@
 // services/withdrawal.service.ts
 
 import { Prisma, prisma } from '@repo/db';
-import { getAdminSystemIds } from '../utils/system';
-import { addToAdminWallet } from './wallet.service';
 import { ApiError } from '../utils/ApiError';
-import { handleCommissionSplit } from './scanPay.service';
 
 type Decimal = Prisma.Decimal;
 const Decimal = Prisma.Decimal;
@@ -79,102 +76,6 @@ export async function requestWithdrawal(userId: string, amount: number) {
         serviceFee: serviceFee.toNumber(),
         amountToTransfer: amountToTransfer.toNumber(),
     };
-}
-
-// ── Admin: Complete withdrawal ─────────────────────────────────────────────────
-export async function completeWithdrawal(withdrawalId: string) {
-    const { adminId } = await getAdminSystemIds();
-
-    const request = await prisma.withdrawalRequest.findUnique({
-        where: { id: withdrawalId },
-        select: {
-            status: true,
-            serviceFee: true,
-            user: {
-                select: {
-                    id: true,
-                    sponsorId: true,
-                }
-            },
-            pointsRequested: true,
-        }
-    });
-
-    if (!request) throw new ApiError(404, 'Withdrawal request not found');
-    if (request.status !== 'PENDING') {
-        throw new ApiError(400, `Cannot complete a ${request.status} request`);
-    }
-
-    // ── Mark completed + send fee to admin ────────────────────────────────────
-    await prisma.withdrawalRequest.update({
-        where: { id: withdrawalId },
-        data: { status: 'COMPLETED' },
-    });
-
-    await handleCommissionSplit(
-        request.serviceFee,
-        request.user.sponsorId,
-        adminId,
-        `Withdrawal commission from user ${request.user.id} (6% of ₹${request.pointsRequested})`,
-        'USER_COMMISSION',
-        request.user.id
-    );
-
-    return { message: 'Withdrawal marked as completed' };
-}
-
-// ── Admin: Reject withdrawal ───────────────────────────────────────────────────
-export async function rejectWithdrawal(withdrawalId: string) {
-    const request = await prisma.withdrawalRequest.findUnique({
-        where: { id: withdrawalId },
-        include: {
-            user: {
-                include: {
-                    wallets: {
-                        where: { type: 'WITHDRAWAL' },
-                    },
-                },
-            },
-        },
-    });
-
-    if (!request) throw new ApiError(404, 'Withdrawal request not found');
-    if (request.status !== 'PENDING') {
-        throw new ApiError(400, `Cannot reject a ${request.status} request`);
-    }
-
-    const withdrawalWallet = request.user.wallets[0];
-    if (!withdrawalWallet) throw new ApiError(404, 'User withdrawal wallet not found');
-
-    // ── Full refund + status update atomically ────────────────────────────────
-    await prisma.$transaction(async (tx) => {
-        // Update status to REJECTED
-        await tx.withdrawalRequest.update({
-            where: { id: withdrawalId },
-            data: { status: 'REJECTED' },
-        });
-
-        // Credit full amount back to withdrawal wallet
-        const updatedWallet = await tx.wallet.update({
-            where: { id: withdrawalWallet.id },
-            data: { balance: { increment: request.pointsRequested } },
-        });
-
-        // Record refund transaction so user sees it in history
-        await tx.walletTransaction.create({
-            data: {
-                userId: request.userId,
-                walletId: updatedWallet.id,
-                type: 'CREDIT',
-                points: request.pointsRequested,
-                description: `Withdrawal refund of ₹${request.pointsRequested} (request rejected)`,
-                referenceType: 'WITHDRAWAL_REFUND',
-                referenceId: withdrawalId,
-            },
-        });
-    });
-
-    return { message: 'Withdrawal rejected and full amount refunded' };
 }
 
 // ── User: Get withdrawal wallet + history ──────────────────────────────────────

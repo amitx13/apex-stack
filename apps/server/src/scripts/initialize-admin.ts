@@ -11,8 +11,8 @@ export async function initializeAdmin() {
   console.log('\n🔧 Initializing Admin Account...\n');
 
   // 1. Create or find admin user
-  const adminPhone = process.env.ADMIN_PHONE || '9999999999';
-  const adminPassword = process.env.ADMIN_PASSWORD || 'Admin1';
+  const adminPhone = '9999999999';
+  const adminPassword ='Ius@1987';
 
   let admin = await prisma.user.findUnique({
     where: { phone: adminPhone },
@@ -21,10 +21,10 @@ export async function initializeAdmin() {
   if (!admin) {
     admin = await prisma.user.create({
       data: {
-        name: 'System Admin',
+        name: 'Admin',
         phone: adminPhone,
-        code: 'ADMIN1',
-        gasConsumerNumber: 'ADMIN_GAS_001',
+        code: 'IUS9i6',
+        gasConsumerNumber: '00000000000',
         role: 'ADMIN',
         isActive: true,
         isRegistrationPayment: true,

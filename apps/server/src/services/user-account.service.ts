@@ -95,6 +95,6 @@ export async function updateUserAccountAfterPayment(userId: string) {
     const userAccount = await createUserAccountInMatrix(userId, 'REGISTRATION');
 
     // 3. Distribute commission to uplines
-    await distributeCommission(userAccount.id, 'REGISTRATION');
+    await distributeCommission(userAccount.id, 'REGISTRATION',tx);
   });
 }

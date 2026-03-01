@@ -62,7 +62,16 @@ export const addBankDetails = async (req: Request, res: Response) => {
   const userId = req.user?.userId;
   const role = req.user?.role;
 
+  let uploadedFilePath: string | null = null;
+
+  if (req.file) {
+    uploadedFilePath = req.file.path;
+  }
+
   if (!userId) {
+    if (uploadedFilePath) {
+      await deleteUploadedFile(uploadedFilePath);
+    }
     throw new ApiError(401, "Unauthorized");
   }
 
@@ -75,7 +84,6 @@ export const addBankDetails = async (req: Request, res: Response) => {
     gPay,
   } = req.body;
 
-  const qrCode = req.file?.path || null;
 
   if (role === "VENDOR") {
     try {
@@ -88,7 +96,7 @@ export const addBankDetails = async (req: Request, res: Response) => {
           ifscCode: ifscCode.toUpperCase(),
           accountType,
           upiId: upiId || null,
-          qrCode,
+          qrCode: uploadedFilePath,
           gPay: gPay || null,
         },
       });
@@ -99,7 +107,10 @@ export const addBankDetails = async (req: Request, res: Response) => {
       });
 
     } catch (error: any) {
-      console.error('DB Error:', error);
+      // console.error('DB Error:', error);
+      if (uploadedFilePath) {
+        await deleteUploadedFile(uploadedFilePath);
+      }
       if (error.message) {
         throw new ApiError(500, error.message);
       }
@@ -116,7 +127,7 @@ export const addBankDetails = async (req: Request, res: Response) => {
           ifscCode: ifscCode.toUpperCase(),
           accountType,
           upiId: upiId || null,
-          qrCode,
+          qrCode: uploadedFilePath,
           gPay: gPay || null,
         },
       });
@@ -127,7 +138,10 @@ export const addBankDetails = async (req: Request, res: Response) => {
       });
 
     } catch (error: any) {
-      console.error('DB Error:', error);
+      if (uploadedFilePath) {
+        await deleteUploadedFile(uploadedFilePath);
+      }
+      // console.error('DB Error:', error);
       if (error.message) {
         throw new ApiError(500, error.message);
       }
@@ -163,7 +177,7 @@ export const updateBankDetails = async (req: Request, res: Response) => {
     if (uploadedFilePath) {
       await deleteUploadedFile(uploadedFilePath);
     }
-    
+
     throw new ApiError(401, "Unauthorized");
   }
 
@@ -422,7 +436,7 @@ export const generateVendorQR = async (req: Request, res: Response) => {
 
   const fileName = `vendor_${vendorId}.png`;
   const filePath = path.join(dir, fileName);
-  const dbPath = `uploads/qrcode/${fileName}`;
+  const dbPath = `/uploads/qrcode/${fileName}`;
 
   // ✅ QR encodes only vendorId — everything else resolved server-side at scan time
   try {

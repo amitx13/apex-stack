@@ -10,7 +10,7 @@ export const secureStorage = {
     try {
       await SecureStore.setItemAsync(TOKEN_KEY, token);
     } catch (error) {
-      console.error('Failed to save token:', error);
+      // console.error('Failed to save token:', error);
       throw error;
     }
   },
@@ -20,7 +20,7 @@ export const secureStorage = {
     try {
       return await SecureStore.getItemAsync(TOKEN_KEY);
     } catch (error) {
-      console.error('Failed to get token:', error);
+      // console.error('Failed to get token:', error);
       return null;
     }
   },
@@ -30,7 +30,7 @@ export const secureStorage = {
     try {
       await SecureStore.deleteItemAsync(TOKEN_KEY);
     } catch (error) {
-      console.error('Failed to delete token:', error);
+      // console.error('Failed to delete token:', error);
     }
   },
 
@@ -39,7 +39,7 @@ export const secureStorage = {
     try {
       await SecureStore.setItemAsync(USER_KEY, JSON.stringify(user));
     } catch (error) {
-      console.error('Failed to save user:', error);
+      // console.error('Failed to save user:', error);
     }
   },
 
@@ -49,7 +49,7 @@ export const secureStorage = {
       const userData = await SecureStore.getItemAsync(USER_KEY);
       return userData ? JSON.parse(userData) : null;
     } catch (error) {
-      console.error('Failed to get user:', error);
+      // console.error('Failed to get user:', error);
       return null;
     }
   },
@@ -59,7 +59,7 @@ export const secureStorage = {
     try {
       await SecureStore.deleteItemAsync(USER_KEY);
     } catch (error) {
-      console.error('Failed to delete user:', error);
+      // console.error('Failed to delete user:', error);
     }
   },
 

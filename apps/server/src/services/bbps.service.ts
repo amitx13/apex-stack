@@ -327,7 +327,7 @@ class BBPSService {
     imwtid: string;
     oprID: string;
   }) {
-    const { orderid, status, oprID } = callbackData;
+    const { orderid, imwtid, status, oprID } = callbackData;
     const normalizedStatus = (status || '').toUpperCase();
 
     const transaction = await prisma.serviceTransaction.findUnique({
@@ -359,6 +359,7 @@ class BBPSService {
         data: {
           status: 'SUCCESS',
           operatorTxnId: oprID,
+          imwalletTxnId: imwtid,
         },
       });
 

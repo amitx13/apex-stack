@@ -1,10 +1,7 @@
 // services/autopay.service.ts
 
 import { Prisma, prisma } from '@repo/db';
-import { addToAdminWallet } from './wallet.service';
 import { ApiError } from '../utils/ApiError';
-import { getAdminSystemIds } from '../utils/system';
-import { handleCommissionSplit } from './scanPay.service';
 
 type Decimal = Prisma.Decimal;
 const Decimal = Prisma.Decimal;
@@ -130,111 +127,6 @@ export async function cancelAutoPay(userId: string, autoPayId: string) {
         where: { id: autoPayId },
         data: { status: 'CANCELLED' },
     });
-}
-
-// ── Admin: Approve setup ──────────────────────────────────────────────────────
-export async function approveAutoPay(autoPayId: string) {
-    const autoPay = await prisma.autoPay.findUnique({ where: { id: autoPayId } });
-    if (!autoPay) throw new ApiError(404, 'AutoPay not found');
-    if (autoPay.status !== 'PENDING_APPROVAL') {
-        throw new ApiError(400, `Cannot approve autopay with status ${autoPay.status}`);
-    }
-    return prisma.autoPay.update({
-        where: { id: autoPayId },
-        data: { status: 'ACTIVE' },
-    });
-}
-
-// ── Admin: Reject setup ───────────────────────────────────────────────────────
-export async function rejectAutoPay(autoPayId: string) {
-    const autoPay = await prisma.autoPay.findUnique({ where: { id: autoPayId } });
-    if (!autoPay) throw new ApiError(404, 'AutoPay not found');
-    if (autoPay.status !== 'PENDING_APPROVAL') {
-        throw new ApiError(400, `Cannot reject autopay with status ${autoPay.status}`);
-    }
-    return prisma.autoPay.update({
-        where: { id: autoPayId },
-        data: { status: 'REJECTED' },
-    });
-}
-
-// ── Admin: Complete execution ─────────────────────────────────────────────────
-export async function completeAutoPayExecution(executionId: string) {
-    const { adminId } = await getAdminSystemIds();
-
-    const execution = await prisma.autoPayExecution.findUnique({
-        where: { id: executionId },
-        include: {
-            autoPay: true,
-            user: {
-                select: {
-                    id: true,
-                    sponsorId: true
-                }
-            }
-        },
-    });
-    if (!execution) throw new ApiError(404, 'Execution not found');
-    if (execution.status !== 'SUCCESS') {
-        throw new ApiError(400, 'Only SUCCESS executions can be completed');
-    }
-
-    await handleCommissionSplit(
-        execution.charge,
-        execution.user.sponsorId,
-        adminId,
-        `AutoPay commission — ${execution.autoPay.beneficiaryName} (10% of ₹${execution.amount})`,
-        'USER_COMMISSION',
-        execution.user.id
-    );
-
-    return { message: 'AutoPay execution completed' };
-}
-
-// ── Admin: Reject execution + refund ─────────────────────────────────────────
-export async function rejectAutoPayExecution(executionId: string) {
-    const execution = await prisma.autoPayExecution.findUnique({
-        where: { id: executionId },
-        include: {
-            autoPay: true,
-            user: {
-                include: { wallets: { where: { type: 'SPEND' } } },
-            },
-        },
-    });
-    if (!execution) throw new ApiError(404, 'Execution not found');
-    if (execution.status !== 'SUCCESS') {
-        throw new ApiError(400, 'Only SUCCESS executions can be rejected');
-    }
-
-    const spendWallet = execution.user.wallets[0];
-    if (!spendWallet) throw new ApiError(404, 'Spend wallet not found');
-
-    await prisma.$transaction(async (tx) => {
-        const updatedWallet = await tx.wallet.update({
-            where: { id: spendWallet.id },
-            data: { balance: { increment: execution.totalDebit } },
-        });
-
-        await tx.walletTransaction.create({
-            data: {
-                userId: execution.userId,
-                walletId: updatedWallet.id,
-                type: 'CREDIT',
-                points: execution.totalDebit,
-                description: `AutoPay refund — ${execution.autoPay.beneficiaryName} (₹${execution.totalDebit})`,
-                referenceType: 'AUTOPAY_REFUND',
-                referenceId: executionId,
-            },
-        });
-
-        await tx.autoPayExecution.update({
-            where: { id: executionId },
-            data: { status: 'FAILED' },
-        });
-    });
-
-    return { message: 'AutoPay execution rejected and amount refunded' };
 }
 
 // ── CRON: Run for due date ────────────────────────────────────────────────────

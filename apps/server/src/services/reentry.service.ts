@@ -2,7 +2,7 @@
 
 import { MLM_CONFIG } from '../config/mlm.constants';
 import { deductFromWallet } from './wallet.service';
-import { findNextAvailablePosition } from './matrix.service';
+import { findNextAvailablePosition, getAdminUserId } from './matrix.service';
 import { distributeCommission } from './commission.service';
 import { prisma } from '@repo/db';
 
@@ -54,7 +54,7 @@ export async function processReentryQueue() {
     for (const entry of pending) {
       try {
         const success = await processSingleReentry(entry.id, entry.user.name);
-        
+
         if (success) {
           processed++;
         } else {
@@ -151,7 +151,7 @@ async function processSingleReentry(queueId: string, userName: string): Promise<
     );
 
     // 2. Find next available position in matrix
-    const { parentAccountId, matrixPosition } = await findNextAvailablePosition();
+    const { parentAccountId, matrixPosition } = await findNextAvailablePosition(tx);
 
     // 3. Create new UserAccount (re-entry)
     const newAccount = await tx.userAccount.create({
@@ -176,7 +176,7 @@ async function processSingleReentry(queueId: string, userName: string): Promise<
 
     // 4. Distribute commission to uplines (155 points)
     // This will automatically add uplines to queue if they hit ≥163
-    await distributeCommission(newAccount.id, 'REENTRY');
+    await distributeCommission(newAccount.id, 'REENTRY', tx);
 
     // 5. Mark queue entry as processed
     await tx.reentryQueue.update({

@@ -41,14 +41,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   // 1️⃣ Initialize: Read from SecureStore → Zustand
   initialize: async () => {
     try {
-      console.log('🔄 Initializing auth from SecureStore...');
+      // console.log('🔄 Initializing auth from SecureStore...');
 
       // await new Promise(resolve => setTimeout(resolve, 5000));
 
       const token = await secureStorage.getToken();
 
       if (token) {
-        console.log('✅ Found token in SecureStore');
+        // console.log('✅ Found token in SecureStore');
 
         set({
           token,
@@ -60,15 +60,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           await get().fetchUserDetails();
         } catch (error) {
           // If token is invalid, logout
-          console.error('Token invalid, logging out');
+          // console.error('Token invalid, logging out');
           await get().logout();
         }
       } else {
-        console.log('❌ No token found in SecureStore');
+        // console.log('❌ No token found in SecureStore');
         set({ isInitialized: true });
       }
     } catch (error) {
-      console.error('Failed to initialize auth:', error);
+      // console.error('Failed to initialize auth:', error);
       set({ isInitialized: true });
     }
   },
@@ -77,7 +77,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   login: async (phone: string, password: string, role: 'USER' | 'VENDOR') => {
     set({ isLoading: true });
     try {
-      console.log('🔐 Logging in...');
+      // console.log('🔐 Logging in...');
 
       const response = await api.post(`/auth/login`, {
         phone,
@@ -89,7 +89,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       // Save token
       await secureStorage.saveToken(token);
-      console.log('💾 Token saved to SecureStore');
+      // console.log('💾 Token saved to SecureStore');
 
       // Update state with token
       set({
@@ -100,9 +100,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // ✅ FETCH USER DATA
       await get().fetchUserDetails();
 
-      console.log('✅ Login successful');
+      // console.log('✅ Login successful');
     } catch (error: any) {
-      console.error('❌ Login failed:', error);
+      // console.error('❌ Login failed:', error);
       throw new Error(error.response?.data?.message || error.message || 'Login failed');
     } finally {
       set({ isLoading: false });  // Move to finally block
@@ -146,7 +146,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   fetchUserDetails: async () => {
     set({ isLoading: true });
     try {
-      console.log('🔐 Fetching user details...');
+      // console.log('🔐 Fetching user details...');
 
       const response = await api.get(`/auth/fetchMe`);
       const { user } = response.data;
@@ -154,16 +154,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Save to SecureStore
       await secureStorage.saveUser(user);
 
-      console.log(user)
+      // console.log(user)
 
       set({
         user,
         isLoading: false,  // ✅ Add this
       });
 
-      console.log('✅ Fetch successful');
+      // console.log('✅ Fetch successful');
     } catch (error: any) {
-      console.error('❌ Fetch failed:', error);
+      // console.error('❌ Fetch failed:', error);
       set({ isLoading: false });
       throw new Error(error.response?.data?.message || error.message || 'Fetch failed');
     }
@@ -173,7 +173,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   signup: async (data: SignUpUserInput) => {
     set({ isLoading: true });
     try {
-      console.log('📝 Signing up...');
+      // console.log('📝 Signing up...');
 
       // Call backend API
       const response = await api.post(`/auth/signUp`, data);
@@ -185,7 +185,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         secureStorage.saveToken(token),
         secureStorage.saveUser(user),
       ]);
-      console.log('💾 Token saved to SecureStore');
+      // console.log('💾 Token saved to SecureStore');
 
       // Update Zustand (runtime)
       set({
@@ -194,9 +194,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isAuthenticated: true,
         isLoading: false,
       });
-      console.log('✅ Signup successful');
+      // console.log('✅ Signup successful');
     } catch (error: any) {
-      console.error('❌ Signup failed:', error);
+      // console.error('❌ Signup failed:', error);
       set({ isLoading: false });
       throw new Error(error.response?.data?.message || 'Signup failed');
     }
@@ -205,7 +205,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   signupVendor: async (data: SignUpVendorInput) => {
     set({ isLoading: true });
     try {
-      console.log('📝 Signing up...');
+      // console.log('📝 Signing up...');
 
       // Call backend API
       const response = await api.post(`/auth/signUpVendor`, data);
@@ -217,7 +217,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         secureStorage.saveToken(token),
         secureStorage.saveUser(user),
       ]);
-      console.log('💾 Token saved to SecureStore');
+      // console.log('💾 Token saved to SecureStore');
 
       // Update Zustand (runtime)
       set({
@@ -226,9 +226,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isAuthenticated: true,
         isLoading: false,
       });
-      console.log('✅ Signup successful');
+      // console.log('✅ Signup successful');
     } catch (error: any) {
-      console.error('❌ Signup failed:', error);
+      // console.error('❌ Signup failed:', error);
       set({ isLoading: false });
       throw new Error(error.response?.data?.message || 'Signup failed');
     }
@@ -237,11 +237,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   // 5️⃣ Logout: Delete from SecureStore → Clear Zustand
   logout: async () => {
     try {
-      console.log('🚪 Logging out...');
+      // console.log('🚪 Logging out...');
 
       // Clear SecureStore
       await secureStorage.clearAll();
-      console.log('💾 Token deleted from SecureStore');
+      // console.log('💾 Token deleted from SecureStore');
 
       // Clear Zustand
       set({
@@ -249,9 +249,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         user: null,
         isAuthenticated: false,
       });
-      console.log('✅ Logout successful');
+      // console.log('✅ Logout successful');
     } catch (error) {
-      console.error('Failed to logout:', error);
+      // console.error('Failed to logout:', error);
     }
   },
 

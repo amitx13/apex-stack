@@ -61,7 +61,7 @@ export default function AddBankDetails() {
         setQrCodeImage(result.assets[0].uri);
       }
     } catch (error) {
-      console.error('Image picker error:', error);
+      // console.error('Image picker error:', error);
       showError('Error', 'Failed to pick image. Please try again.');
     }
   };

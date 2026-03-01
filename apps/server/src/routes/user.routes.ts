@@ -49,12 +49,3 @@ router.post('/generateVendorQr', authMiddleware, requireVendor, asyncHandler(gen
 router.put('/updateProfile', authMiddleware, requireVendor, asyncHandler(updateProfile))
 
 export default router;
-
-
-
-/* // ── Admin routes ──────────────────────────────────────────────────────────────
-router.patch('/withdrawal/:withdrawalId/complete', verifyAdmin, asyncHandler(completeWithdrawalController));
-router.patch('/withdrawal/:withdrawalId/reject',   verifyAdmin, asyncHandler(rejectWithdrawalController)); 
-router.patch('/bills/:billRequestId/complete', verifyAdmin, asyncHandler(completeBillRequestController));
-router.patch('/bills/:billRequestId/reject',   verifyAdmin, asyncHandler(rejectBillRequestController));
-*/

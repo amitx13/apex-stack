@@ -59,6 +59,12 @@ export default function TabLayout() {
             title: 'Upload Bill',
           }}
         />
+        <Tabs.Screen
+          name="payment"
+          options={{
+            title: 'Payment',
+          }}
+        />
       </Tabs>
     </View>
   );

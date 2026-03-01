@@ -17,6 +17,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useAuthStore } from '@/store/authStore';
 import { Vendor } from '@repo/types';
+import { getImageUrl } from '@/lib/getImage';
 
 export default function OrderQRScreen() {
     const router = useRouter();
@@ -50,8 +51,6 @@ export default function OrderQRScreen() {
         await fetchVendorStatus(true);
         setRefreshing(false);
     }, []);
-
-    const getImageUrl = (path: string) => `http://192.168.31.185:3000/${path}`;
 
     const handleGenerateQR = async () => {
         setIsGenerating(true);
