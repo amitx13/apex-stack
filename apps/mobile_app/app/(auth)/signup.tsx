@@ -3,6 +3,7 @@ import {
   TextInput,
   Pressable,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { useState } from 'react';
@@ -359,9 +360,7 @@ export default function SignupScreen() {
                   </LinearGradient>
                 </Pressable>
 
-                <Text className="text-foreground/60 text-xs text-center">
-                  By signing up, you agree to our Terms & Privacy Policy
-                </Text>
+                <ConsentText />
               </Animated.View>
 
             ) : (
@@ -489,9 +488,10 @@ export default function SignupScreen() {
                   </Pressable>
                 </View>
 
-                <Text className="text-foreground/60 text-xs text-center mt-3">
+                <Text className="text-foreground/60 text-xs text-center mt-1">
                   Step {vendorStep + 1} of 3
                 </Text>
+                <ConsentText />
               </Animated.View>
             )}
           </View>
@@ -532,5 +532,30 @@ function InputBlock({
         />
       </View>
     </View>
+  );
+}
+
+const TERMS_URL = 'https://indianutilityservices-legal.pages.dev/terms';
+const PRIVACY_URL = 'https://indianutilityservices-legal.pages.dev/privacy-policy';
+
+export function ConsentText() {
+  return (
+    <Text className="text-foreground/60 text-xs text-center mt-3 px-2 leading-5">
+      By signing up or logging in, you consent to IndianUtilityServices{' '}
+      <Text
+        className="text-primary underline text-xs"
+        onPress={() => Linking.openURL(TERMS_URL)}
+      >
+        Terms of Use
+      </Text>
+      {' '}and{' '}
+      <Text
+        className="text-primary underline text-xs"
+        onPress={() => Linking.openURL(PRIVACY_URL)}
+      >
+        Privacy Policy
+      </Text>
+      .
+    </Text>
   );
 }

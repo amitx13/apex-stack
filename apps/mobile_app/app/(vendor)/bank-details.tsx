@@ -3,13 +3,10 @@ import {
     View,
     ScrollView,
     Pressable,
-    RefreshControl,
     Image,
     Modal,
     TextInput,
     ActivityIndicator,
-    TouchableOpacity,
-    StatusBar,
 } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { Screen } from '@/components/Screen';
@@ -61,7 +58,6 @@ const SectionCard = ({
     children,
 }: {
     icon: React.ReactNode;
-    iconColor: string;
     iconBg: string;
     title: string;
     children: React.ReactNode;
@@ -202,11 +198,15 @@ export default function BankDetailsScreen() {
             showError("Error", "No user name found")
             return
         }
-
-        router.push({
-            pathname: '/(app)/addBankDetails',
-            params: { name: user?.name }
-        });
+        if (user?.role === "USER") {
+            router.push({ pathname: '/(app)/addBankDetails', params: { name: user?.name, mode: 'withdrawal' } });
+            return
+        } else {
+            router.push({
+                pathname: '/(app)/addBankDetails',
+                params: { name: user?.name }
+            });
+        }
     }
 
     // ─── Skeleton ────────────────────────────────────────────────────────────────
@@ -297,7 +297,6 @@ export default function BankDetailsScreen() {
                             {/* ── Account Details ─────────────────────────── */}
                             <SectionCard
                                 icon={<Ionicons name="card-outline" size={16} color="#3B82F6" />}
-                                iconColor="#3B82F6"
                                 iconBg="bg-blue-500/10"
                                 title="Account Details"
                             >
@@ -309,7 +308,6 @@ export default function BankDetailsScreen() {
                             {bankDetails.upiId && (
                                 <SectionCard
                                     icon={<MaterialCommunityIcons name="at" size={16} color="#10B981" />}
-                                    iconColor="#10B981"
                                     iconBg="bg-green-500/10"
                                     title="UPI ID"
                                 >
@@ -326,7 +324,6 @@ export default function BankDetailsScreen() {
                             {bankDetails.gPay && (
                                 <SectionCard
                                     icon={<MaterialCommunityIcons name="cellphone" size={16} color="#F59E0B" />}
-                                    iconColor="#F59E0B"
                                     iconBg="bg-orange-500/10"
                                     title="G-Pay / PhonePe"
                                 >
@@ -343,7 +340,6 @@ export default function BankDetailsScreen() {
                             {bankDetails.qrCode && (
                                 <SectionCard
                                     icon={<MaterialCommunityIcons name="qrcode" size={16} color="#00ADB5" />}
-                                    iconColor="#00ADB5"
                                     iconBg="bg-primary/10"
                                     title="Payment QR Code"
                                 >

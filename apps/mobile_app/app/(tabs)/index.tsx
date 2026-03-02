@@ -830,11 +830,13 @@ export default function HomeScreen() {
     name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
 
   const getUserRank = (n: number) => {
-    if (n < 5) return 'Promoter';
-    let rank = 1, upper = 25;
-    while (n >= upper && rank < 15) { rank++; upper *= 5; }
-    return `Rank ${rank}`;
-  };
+    if (n < 5) return 'Starter';
+    if (n < 25) return 'Bronze';
+    if (n < 125) return 'Silver';
+    if (n < 625) return 'Gold';
+    if (n < 3125) return 'Platinum';
+    return 'Diamond';
+  }
 
   const getRankMeta = (n: number) => {
     if (n < 5) return { color: '#9CA3AF', bg: 'rgba(156,163,175,0.15)' };
@@ -916,7 +918,7 @@ export default function HomeScreen() {
 
   const handleNavigateToAddBank = () => {
     if (!user?.name) { showError('Error', 'No user name found'); return; }
-    router.push({ pathname: '/(app)/addBankDetails', params: { name: user?.name } });
+    router.push({ pathname: '/(app)/addBankDetails', params: { name: user?.name, mode: 'withdrawal' } });
   };
 
   if (isLoading || !paymentStatusLoaded) return (
@@ -1066,6 +1068,7 @@ export default function HomeScreen() {
                   <View className="flex-1">
                     <Text className="text-red-400 text-[10px] font-bold uppercase tracking-wider">Account Inactive</Text>
                     <Text className="text-foreground text-sm font-bold">Activate for ₹199</Text>
+                    <Text className="text-red-400/70 text-[10px] mt-0.5">One-time registration fee • Manual verification required</Text>
                   </View>
                   {isPaymentLoading
                     ? <ActivityIndicator size="small" color="#EF4444" />
@@ -1147,22 +1150,52 @@ export default function HomeScreen() {
           )}
 
           {/* ── Rank Progress — always ───────────────────── */}
-          <View className="border border-border/40 bg-transparent rounded-2xl px-4 py-4 mb-6">
+          {user?.isActive && <View className="border border-border/40 bg-transparent rounded-2xl px-4 py-4 mb-6">
             <View className="flex-row items-center justify-between mb-3">
-              <Text className="text-foreground text-sm font-bold">Rank Progress</Text>
-              <View style={{ backgroundColor: rankMeta.bg }} className="flex-row items-center gap-1 px-2.5 py-1 rounded-full">
-                <MaterialCommunityIcons name="crown-outline" size={12} color={rankMeta.color} />
-                <Text style={{ color: rankMeta.color }} className="text-[11px] font-bold">{getUserRank(count)}</Text>
+              <Text className="text-foreground text-sm font-bold">
+                Referral Activity
+              </Text>
+
+              <View
+                style={{ backgroundColor: rankMeta.bg }}
+                className="flex-row items-center gap-1 px-2.5 py-1 rounded-full"
+              >
+                <MaterialCommunityIcons
+                  name="crown-outline"
+                  size={12}
+                  color={rankMeta.color}
+                />
+                <Text
+                  style={{ color: rankMeta.color }}
+                  className="text-[11px] font-bold"
+                >
+                  {getUserRank(count)}
+                </Text>
               </View>
             </View>
+
             <View className="h-2 bg-secondary rounded-full overflow-hidden mb-2">
-              <View style={{ width: `${Math.min(progress * 100, 100)}%`, backgroundColor: rankMeta.color, height: '100%', borderRadius: 999 }} />
+              <View
+                style={{
+                  width: `${Math.min(progress * 100, 100)}%`,
+                  backgroundColor: rankMeta.color,
+                  height: '100%',
+                  borderRadius: 999,
+                }}
+              />
             </View>
+
             <View className="flex-row justify-between">
-              <Text className="text-muted-foreground text-[10px]">{count} members</Text>
-              {next && <Text className="text-muted-foreground text-[10px]">{next - count} more to next rank</Text>}
+              <Text className="text-muted-foreground text-[10px]">
+                {count} referrals
+              </Text>
+              {next && (
+                <Text className="text-muted-foreground text-[10px]">
+                  {next - count} more referrals to progress
+                </Text>
+              )}
             </View>
-          </View>
+          </View>}
 
           {/* ── Services — always ────────────────────────── */}
           <View className="mb-6">
@@ -1188,7 +1221,7 @@ export default function HomeScreen() {
 
           {/* ── Earn More — always ───────────────────────── */}
           <View className="mb-6">
-            <Text className="text-foreground text-base font-bold mb-3">Earn More</Text>
+            <Text className="text-foreground text-base font-bold mb-3">Refer & Earn</Text>
             <Pressable onPress={() => requireActive(() => router.push('/(tabs)/referrals'))} className="active:scale-95">
               <LinearGradient colors={['rgba(0,173,181,0.18)', 'rgba(34,40,49,0.0)']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: 18 }}>
                 <View className="border border-primary/20 rounded-2xl px-4 py-3.5">
@@ -1198,7 +1231,7 @@ export default function HomeScreen() {
                     </View>
                     <View className="flex-1">
                       <Text className="text-foreground text-sm font-bold">Refer & Earn Rewards</Text>
-                      <Text className="text-muted-foreground text-[11px] mt-0.5">Share your code • build network • earn more</Text>
+                      <Text className="text-muted-foreground text-[11px] mt-0.5">Share your code • invite friends • earn rewards</Text>
                       <View className="flex-row items-center gap-2 mt-2">
                         <View className="px-2 py-0.5 rounded-full bg-primary/15 border border-primary/20"><Text className="text-primary text-[10px] font-bold">Invite</Text></View>
                         <View className="px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20"><Text className="text-blue-400 text-[10px] font-bold">Track</Text></View>

@@ -3,6 +3,7 @@ import {
     TextInput,
     Pressable,
     ActivityIndicator,
+    Linking,
 } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { useState } from 'react';
@@ -18,6 +19,7 @@ import Animated, {
     withSpring,
 } from 'react-native-reanimated';
 import { Image } from 'expo-image';
+import { ConsentText } from './signup';
 
 enum userType {
     User = 'USER',
@@ -253,6 +255,7 @@ export default function LoginScreen() {
                                 )}
                             </LinearGradient>
                         </Pressable>
+                        <ConsentText />
                     </View>
                 </BlurView>
 

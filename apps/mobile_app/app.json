@@ -17,10 +17,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "minSdkVersion": 18,
-      "permissions": [
-        "android.permission.RECORD_AUDIO"
-      ]
+      "minSdkVersion": 24
     },
     "web": {
       "bundler": "metro",
@@ -40,9 +37,15 @@
       ],
       "expo-secure-store",
       [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow IUS to access your camera to scan vendor QR codes."
+        }
+      ],
+      [
         "expo-image-picker",
         {
-          "photosPermission": "Allow IUS to have access to your photos."
+          "photosPermission": "Allow IUS to access your photos to upload your payment QR code."
         }
       ],
       [
@@ -51,6 +54,16 @@
           "photosPermission": "Allow IUS to save QR codes to your gallery.",
           "savePhotosPermission": "Allow IUS to save QR codes to your gallery.",
           "isAccessMediaLocationEnabled": true
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "targetSdkVersion": 35,
+            "compileSdkVersion": 35,
+            "minSdkVersion": 24
+          }
         }
       ]
     ],
@@ -64,9 +77,6 @@
         "projectId": "6c317529-68c6-4f63-aede-a226cbbd9e01"
       }
     },
-    "owner": "apx13",
-    "ios": {
-      "bundleIdentifier": "in.indianutilityservices"
-    }
+    "owner": "apx13"
   }
 }

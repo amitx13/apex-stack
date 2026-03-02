@@ -10,6 +10,10 @@ import { Screen } from '@/components/Screen';
 import * as ImagePicker from 'expo-image-picker';
 import * as Clipboard from 'expo-clipboard';
 import { useAuthStore } from '@/store/authStore';
+import { TextInput } from 'react-native';
+import { Modal } from 'react-native';
+import { getImageUrl } from '@/lib/getImage';
+
 
 interface AdminBank {
     bankName: string;
@@ -21,6 +25,7 @@ interface AdminBank {
     qrCode: string | null;
 }
 
+
 interface PaymentRecord {
     id: string;
     orderId: string;
@@ -28,6 +33,7 @@ interface PaymentRecord {
     status: string;
     transactionId: string | null;
 }
+
 
 export default function PaymentScreen() {
     const router = useRouter();
@@ -60,7 +66,6 @@ export default function PaymentScreen() {
         };
         init();
     }, []);
-
 
     const copy = async (text: string, label: string) => {
         await Clipboard.setStringAsync(text);
@@ -162,8 +167,10 @@ export default function PaymentScreen() {
                     </View>
                     <View className="items-center gap-1">
                         <Text className="text-foreground text-xl font-bold">Under Review</Text>
+                        {/* ✅ Fix 3 — clearer manual review message */}
                         <Text className="text-muted-foreground text-sm text-center">
-                            Your payment proof has been submitted and is being reviewed by the admin.
+                            Your payment proof has been submitted. Manual review may take up to 24–48 hours.
+                            You'll be activated once the admin approves.
                         </Text>
                     </View>
                     <View className="w-full bg-secondary/30 rounded-2xl p-4 gap-2 border border-border/40">
@@ -202,7 +209,10 @@ export default function PaymentScreen() {
                         </Pressable>
                         <View>
                             <Text className="text-foreground text-lg font-bold">Activate Account</Text>
-                            <Text className="text-muted-foreground text-[11px]">Pay ₹199 to activate your account</Text>
+                            {/* ✅ Fix 4 — clearer header subtitle */}
+                            <Text className="text-muted-foreground text-[11px]">
+                                One-time registration fee • Manual activation
+                            </Text>
                         </View>
                     </View>
                 </LinearGradient>
@@ -216,7 +226,10 @@ export default function PaymentScreen() {
                             <View className="w-6 h-6 rounded-full bg-primary items-center justify-center">
                                 <Text className="text-white text-[11px] font-black">1</Text>
                             </View>
-                            <Text className="text-foreground text-sm font-bold">Pay ₹199 to the admin</Text>
+                            {/* ✅ Fix 5 — updated step heading */}
+                            <Text className="text-foreground text-sm font-bold">
+                                Pay ₹199 registration fee
+                            </Text>
                         </View>
 
                         <View className="rounded-2xl border border-border/40 overflow-hidden">
@@ -232,6 +245,15 @@ export default function PaymentScreen() {
                                     <Text className="text-primary text-2xl font-black">199</Text>
                                 </View>
                             </LinearGradient>
+
+                            {/* ✅ Fix 1 — Fee disclaimer */}
+                            <View className="mx-4 mb-2 mt-3 bg-amber-500/10 border border-amber-500/25 rounded-xl px-3 py-2.5 flex-row gap-2">
+                                <Ionicons name="information-circle-outline" size={14} color="#F59E0B" style={{ marginTop: 1 }} />
+                                <Text className="text-amber-400/90 text-[10px] flex-1 leading-4">
+                                    This is a one-time registration fee. It unlocks utility services (recharge, BBPS) and the referral program.{' '}
+                                    <Text className="font-bold text-xs">This fee is non-refundable once your account is activated.</Text>
+                                </Text>
+                            </View>
 
                             {/* Bank details */}
                             <View className="px-4 py-1 divide-y divide-border/30">
@@ -299,7 +321,7 @@ export default function PaymentScreen() {
                                     UTR / Transaction ID <Text className="text-red-400">*</Text>
                                 </Text>
                                 <View className={`flex-row items-center gap-3 rounded-xl border px-3 py-3
-                  ${transactionId ? 'border-primary/40 bg-primary/5' : 'border-border/60 bg-secondary/30'}`}>
+                                    ${transactionId ? 'border-primary/40 bg-primary/5' : 'border-border/60 bg-secondary/30'}`}>
                                     <Ionicons name="receipt-outline" size={18}
                                         color={transactionId ? '#00ADB5' : '#9CA3AF'} />
                                     <View className="flex-1 p-1">
@@ -384,16 +406,21 @@ export default function PaymentScreen() {
                     </Pressable>
 
                     {/* ── Note ──────────────────────────────────────── */}
+                    {/* ✅ Fix 2 — clearer manual review + timing note */}
                     <View className="flex-row gap-2 px-1">
                         <Ionicons name="information-circle-outline" size={14} color="#6B7280" style={{ marginTop: 1 }} />
                         <Text className="text-muted-foreground text-[11px] flex-1 leading-4">
-                            After submitting, your account will be reviewed and activated within a few hours.
-                            Make sure the UTR number matches your payment exactly.
+                            After submitting, your payment will be manually reviewed by the admin.
+                            Activation may take up to 24–48 hours.{' '}
+                            <Text className="text-foreground/60 text-xs">
+                                Make sure the UTR / Transaction ID matches your payment exactly.
+                            </Text>
                         </Text>
                     </View>
 
                 </ScrollView>
             </View>
+
             {/* ── QR Fullscreen Modal ──────────────────────────── */}
             {adminBank?.qrCode && (
                 <Modal
@@ -410,10 +437,8 @@ export default function PaymentScreen() {
                             style={{ width: '90%' }}
                             className="items-center gap-4"
                         >
-                            {/* Close hint */}
                             <Text className="text-white/60 text-xs">Tap anywhere to close</Text>
 
-                            {/* QR */}
                             <Pressable onPress={e => e.stopPropagation()}>
                                 <View className="bg-white rounded-3xl p-5 border border-white/20"
                                     style={{ width: '100%', aspectRatio: 1 }}>
@@ -425,7 +450,6 @@ export default function PaymentScreen() {
                                 </View>
                             </Pressable>
 
-                            {/* Amount label */}
                             <View className="flex-row items-center bg-primary/20 border border-primary/30 px-5 py-2.5 rounded-full">
                                 <MaterialIcons name="currency-rupee" size={18} color="#00ADB5" />
                                 <Text className="text-primary text-xl font-black">199</Text>
@@ -441,11 +465,6 @@ export default function PaymentScreen() {
         </Screen>
     );
 }
-
-// ── Inline TextInput wrapper (avoids importing RN TextInput alias clash) ──
-import { TextInput } from 'react-native';
-import { Modal } from 'react-native';
-import { getImageUrl } from '@/lib/getImage';
 
 const TextInputField = ({
     value, onChangeText, placeholder, placeholderTextColor,

@@ -35,7 +35,6 @@ type VendorInfo = {
     shopName: string;
     ownerName: string;
     category: string;
-    commissionRate: number;
 };
 
 type PaymentResult = {
@@ -260,11 +259,6 @@ export default function ScanPayConfirmationScreen() {
     const userCommission = parseFloat((parsedAmount * 0.10).toFixed(2));
     const totalToPay = parseFloat((parsedAmount + userCommission).toFixed(2));
 
-    // ✅ For the breakdown: what vendor commission looks like (info only)
-    const vendorCommissionRate = Number(vendor?.commissionRate ?? 0);
-    const vendorCommission = parseFloat((parsedAmount * vendorCommissionRate / 100).toFixed(2));
-    const vendorReceives = parseFloat((parsedAmount - vendorCommission).toFixed(2));
-
     const toggleCharges = () => {
         const next = !chargesOpen;
         setChargesOpen(next);
@@ -451,17 +445,7 @@ export default function ScanPayConfirmationScreen() {
                                                     +₹{userCommission.toFixed(2)}
                                                 </Text>
                                             </View>
-                                            {/* ✅ Show vendor's commission rate as info only */}
-                                            {vendorCommissionRate > 0 && (
-                                                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                                                    <Text style={{ color: '#6B7280', fontSize: 12 }}>
-                                                        Vendor charge ({vendorCommissionRate}%)
-                                                    </Text>
-                                                    <Text style={{ color: '#6B7280', fontSize: 12, fontWeight: '600' }}>
-                                                        ₹{vendorCommission.toFixed(2)} (vendor bears)
-                                                    </Text>
-                                                </View>
-                                            )}
+
                                             <View style={{
                                                 flexDirection: 'row', justifyContent: 'space-between',
                                                 paddingTop: 9, borderTopWidth: 1,

@@ -18,6 +18,10 @@ export default function AddBankDetails() {
   const { user, setUser } = useAuthStore()
   const { showError, showSuccess } = useMessage();
   const vendorName = (params.name as string) || 'Vendor';
+  // Add to params destructuring at top
+  const mode = (params.mode as string) || 'settlement';
+  const isUserWithdrawal = mode === 'withdrawal';
+
 
   const [formData, setFormData] = useState<VendorBankDetails>({
     accountNumber: '',
@@ -129,7 +133,7 @@ export default function AddBankDetails() {
       });
 
       if (response.data.success && user) {
-        setUser({...user, isBankAdded:true})
+        setUser({ ...user, isBankAdded: true })
       }
 
       showSuccess('Success', 'Bank details added successfully');
@@ -155,8 +159,9 @@ export default function AddBankDetails() {
             <Ionicons name="arrow-back" size={22} color="#00ADB5" />
           </Pressable>
           <Text className="text-foreground text-base font-bold flex-1">
-            Add Bank Account
+            {isUserWithdrawal ? 'Add Withdrawal Bank Account' : 'Add Bank Account'}
           </Text>
+
         </View>
       </View>
 
@@ -168,8 +173,10 @@ export default function AddBankDetails() {
         {/* Subheading */}
         <View className="mt-6 mb-6">
           <Text className="text-muted-foreground text-xs leading-relaxed">
-            Enter bank account details for{' '}
-            <Text className="text-foreground font-semibold">{vendorName}</Text>
+            {isUserWithdrawal
+              ? 'Add your bank account to enable withdrawals from your Withdrawal Wallet.'
+              : <>Enter bank account details for{' '}<Text className="text-foreground font-semibold">{vendorName}</Text></>
+            }
           </Text>
         </View>
 
@@ -405,7 +412,10 @@ export default function AddBankDetails() {
                 Bank Account Verification
               </Text>
               <Text className="text-muted-foreground text-[10px] leading-relaxed">
-                Your bank details will be verified before activation. Settlement payments will be transferred to this account.
+                {isUserWithdrawal
+                  ? 'Your bank details will be manually verified before activation. Withdrawals will be transferred to this account after deducting a 6% processing fee and subject to minimum withdrawal limits.'
+                  : 'Your bank details will be verified before activation. Settlement payments (T+0 / T+1) will be transferred to this account.'
+                }
               </Text>
             </View>
           </View>

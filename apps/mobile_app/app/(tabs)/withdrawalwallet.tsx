@@ -125,7 +125,7 @@ export default function WithdrawalScreen() {
         setIsSubmitting(true);
         try {
             await api.post('/withdrawal/request', { amount: parsedAmount });
-            showSuccess('Done', `Withdrawal of ₹${parsedAmount.toFixed(2)} submitted`);
+            showSuccess('Submitted', `Withdrawal of ₹${parsedAmount.toFixed(2)} submitted. Manual processing may take 24–48 hours.`);
             setAmount('');
             await fetchData(true);
         } catch (e: any) {
@@ -143,7 +143,7 @@ export default function WithdrawalScreen() {
 
         router.push({
             pathname: '/(app)/addBankDetails',
-            params: { name: user?.name }
+            params: { name: user?.name, mode: 'withdrawal' }
         });
     }
 
@@ -476,6 +476,19 @@ export default function WithdrawalScreen() {
                                     </Text>
                                 </View>
                             )}
+                            <View style={{
+                                flexDirection: 'row', alignItems: 'flex-start',
+                                gap: 8,
+                                backgroundColor: 'rgba(0,173,181,0.06)',
+                                borderRadius: 10, padding: 10,
+                                borderWidth: 1,
+                                borderColor: 'rgba(0,173,181,0.15)',
+                            }}>
+                                <Ionicons name="information-circle-outline" size={14} color="#00ADB5" style={{ marginTop: 1 }} />
+                                <Text style={{ color: '#9CA3AF', fontSize: 11, flex: 1, lineHeight: 17 }}>
+                                    Withdrawals are manually processed by admin. Approved amounts are transferred to your registered bank account after deducting the 6% service fee.
+                                </Text>
+                            </View>
 
                             {/* Submit button */}
                             <Pressable
@@ -605,12 +618,12 @@ export default function WithdrawalScreen() {
                                                     fontSize: 13,
                                                 }}>
                                                     Receives{' '}
-                                                    <Text style={{ color: '#34D399', fontWeight: '500',fontSize: 13, }}>
+                                                    <Text style={{ color: '#34D399', fontWeight: '500', fontSize: 13, }}>
                                                         ₹{Number(item.amountToTransfer).toFixed(2)}
                                                     </Text>
                                                     {'  ·  '}
                                                     fee{' '}
-                                                    <Text style={{ color: '#FB923C', fontWeight: '500',fontSize: 13, }}>
+                                                    <Text style={{ color: '#FB923C', fontWeight: '500', fontSize: 13, }}>
                                                         ₹{Number(item.serviceFee).toFixed(2)}
                                                     </Text>
                                                 </Text>

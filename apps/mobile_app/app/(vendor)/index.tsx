@@ -1,8 +1,8 @@
-import { View, ScrollView, Pressable, ActivityIndicator, Modal, TextInput } from 'react-native';
+import { View, ScrollView, Pressable, ActivityIndicator, Modal, TextInput, Linking } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { Screen } from '@/components/Screen';
 import { useAuthStore } from '@/store/authStore';
-import { AntDesign, FontAwesome, Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback, useState, useEffect } from 'react';
 import { useMessage } from '@/contexts/MessageContext';
@@ -468,8 +468,10 @@ export default function VendorDashboard() {
                   </View>
 
                   <View className="mt-3 pt-3 border-t border-red-500/20">
-                    <Pressable className="flex-row items-center justify-center gap-2 py-2 active:opacity-70">
-                      <Ionicons name="help-circle-outline" size={16} color="#EF4444" />
+                    <Pressable
+                      onPress={() => Linking.openURL('mailto:support@indianutilityservices.in')}
+                      className="flex-row items-center justify-center gap-2 py-2 active:opacity-70"
+                    >                      <Ionicons name="help-circle-outline" size={16} color="#EF4444" />
                       {/* ✅ Link text: text-[10px] font-semibold */}
                       <Text className="text-red-400 text-[10px] font-semibold">
                         Contact Support for Help
@@ -496,7 +498,7 @@ export default function VendorDashboard() {
                     </Text>
                     {/* ✅ Section subtitle: text-[10px] */}
                     <Text className="text-muted-foreground text-[10px]">
-                      Platform fee per booking
+                      Fee charged to customer per transaction
                     </Text>
                   </View>
                 </View>

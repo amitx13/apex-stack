@@ -21,7 +21,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
 
 const allowedOrigins = [
-  'http://192.168.31.185:5173/',
+  'http://localhost:5173',
   'http://192.168.31.185:8081'
 ];
 

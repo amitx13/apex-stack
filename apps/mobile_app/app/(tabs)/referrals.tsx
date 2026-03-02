@@ -33,6 +33,7 @@ type ReferredUser = {
     createdAt: string;
 };
 
+// ✅ Removed commissionRate — vendor's B2B rate is private, not user-facing
 type ReferredVendor = {
     id: string;
     shopName: string;
@@ -40,7 +41,6 @@ type ReferredVendor = {
     phone: string;
     category: string;
     isActive: boolean;
-    commissionRate: number;
     approvalStatus: 'PENDING' | 'APPROVED' | 'REJECTED';
     createdAt: string;
 };
@@ -99,7 +99,6 @@ function ReferralCodeCard({ code, name }: { code: string; name: string }) {
                     alignItems: 'center',
                     justifyContent: 'space-between',
                 }}>
-                    {/* Code display */}
                     <View style={{ gap: 2 }}>
                         <Text style={{
                             color: '#00ADB5', fontSize: 28, fontWeight: '900',
@@ -112,7 +111,6 @@ function ReferralCodeCard({ code, name }: { code: string; name: string }) {
                         </Text>
                     </View>
 
-                    {/* Share button */}
                     <Pressable
                         onPress={handleShare}
                         style={({ pressed }) => ({
@@ -191,7 +189,6 @@ function UserCard({ item }: { item: ReferredUser }) {
                     flexDirection: 'row', alignItems: 'center',
                     gap: 10, flex: 1, minWidth: 0,
                 }}>
-                    {/* Avatar */}
                     <View style={{
                         width: 38, height: 38, borderRadius: 19,
                         backgroundColor: 'rgba(0,173,181,0.1)',
@@ -261,7 +258,6 @@ function UserCard({ item }: { item: ReferredUser }) {
 // ── Vendor Card ───────────────────────────────────────────────────────────────
 function VendorCard({ item }: { item: ReferredVendor }) {
     const approvalStyle = APPROVAL_STYLE[item.approvalStatus];
-    const hasCommission = Number(item.commissionRate) > 0;
 
     return (
         <View style={{
@@ -302,6 +298,7 @@ function VendorCard({ item }: { item: ReferredVendor }) {
                         >
                             {item.ownerName}
                         </Text>
+
                     </View>
                 </View>
 
@@ -346,43 +343,10 @@ function VendorCard({ item }: { item: ReferredVendor }) {
                         {item.category}
                     </Text>
                 </View>
-            </View>
-
-            {/* Row 3: Commission rate + approval status + joined date */}
-            <View style={{
-                flexDirection: 'row', alignItems: 'center',
-                justifyContent: 'space-between',
-            }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    {/* Commission chip */}
-                    <View style={{
-                        flexDirection: 'row', alignItems: 'center', gap: 4,
-                        backgroundColor: hasCommission
-                            ? 'rgba(251,191,36,0.08)'
-                            : 'rgba(107,114,128,0.08)',
-                        borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4,
-                        borderWidth: 1,
-                        borderColor: hasCommission
-                            ? 'rgba(251,191,36,0.2)'
-                            : 'rgba(107,114,128,0.15)',
-                    }}>
-                        <MaterialCommunityIcons
-                            name="percent-outline"
-                            size={10}
-                            color={hasCommission ? '#FBBF24' : '#6B7280'}
-                        />
-                        <Text style={{
-                            color: hasCommission ? '#FBBF24' : '#6B7280',
-                            fontSize: 10, fontWeight: '800',
-                        }}>
-                            {hasCommission
-                                ? `${Number(item.commissionRate)}% commission`
-                                : 'No commission'
-                            }
-                        </Text>
-                    </View>
-
-                    {/* Approval status */}
+                <View style={{
+                    flexDirection: 'row', alignItems: 'center',
+                    justifyContent: 'space-between',
+                }}>
                     <View style={{
                         backgroundColor: approvalStyle.bg,
                         borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4,
@@ -396,14 +360,12 @@ function VendorCard({ item }: { item: ReferredVendor }) {
                         </Text>
                     </View>
                 </View>
-
-                {/* Joined date */}
-                <Text style={{ color: '#374151', fontSize: 10 }}>
-                    {new Date(item.createdAt).toLocaleDateString('en-IN', {
-                        day: 'numeric', month: 'short', year: 'numeric',
-                    })}
-                </Text>
             </View>
+            <Text style={{ color: '#6B7280', fontSize: 10 }}>
+                {new Date(item.createdAt).toLocaleDateString('en-IN', {
+                    day: 'numeric', month: 'short', year: 'numeric',
+                })}
+            </Text>
         </View>
     );
 }
@@ -469,8 +431,8 @@ export default function ReferralsScreen() {
         setRefreshing(false);
     }, []);
 
-    if(!user){
-        return
+    if (!user) {
+        return null;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -514,7 +476,7 @@ export default function ReferralsScreen() {
                     }
                     contentContainerStyle={{ paddingBottom: 100 }}
                 >
-                    {/* ✅ Logged-in user's own referral code — always visible */}
+                    {/* Logged-in user's own referral code — always visible */}
                     <ReferralCodeCard code={user?.code} name={user?.name} />
 
                     {/* Tabs */}
@@ -548,7 +510,6 @@ export default function ReferralsScreen() {
                                     }}>
                                         {tab === 'USERS' ? 'Users' : 'Vendors'}
                                     </Text>
-                                    {/* Count badge */}
                                     {count !== undefined && (
                                         <View style={{
                                             backgroundColor: isActive

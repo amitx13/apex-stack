@@ -696,7 +696,6 @@ export const getVendorByQr = async (req: Request, res: Response) => {
       ownerName: true,
       category: true,
       isActive: true,
-      commissionRate: true,
     },
   });
 

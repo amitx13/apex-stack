@@ -2,9 +2,9 @@ import React, { useState, useCallback } from 'react';
 import {
     View,
     Pressable,
-    RefreshControl,
     TextInput,
     ActivityIndicator,
+    Linking,
 } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { Screen } from '@/components/Screen';
@@ -16,8 +16,7 @@ import { api } from '@/lib/axios';
 import { Skeleton } from '@/components/ui/skeleton';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
+// ─── Types ────────────────────────────────────────────────────────────────────
 type EditSection = 'personal' | 'shop' | 'kyc' | null;
 type PersonalForm = { ownerName: string; phone: string; password: string; newPassword: string };
 type ShopForm = { shopName: string; category: string; pincode: string };
@@ -42,8 +41,7 @@ interface UserProfile {
     createdAt: string;
 }
 
-// ─── EditableRow ─────────────────────────────────────────────────────────────
-
+// ─── EditableRow ──────────────────────────────────────────────────────────────
 const EditableRow = ({
     label,
     value,
@@ -55,6 +53,7 @@ const EditableRow = ({
     autoCapitalize,
     placeholder,
     isPassword = false,
+    maskedValue,
 }: {
     label: string;
     value: string;
@@ -66,6 +65,8 @@ const EditableRow = ({
     autoCapitalize?: any;
     placeholder?: string;
     isPassword?: boolean;
+    // ✅ Fix 3 & 4 — optional masked display for sensitive fields in read mode
+    maskedValue?: string;
 }) => (
     <View className="flex-row items-center gap-3 py-3 border-b border-border/10">
         <View className="w-7 items-center">{icon}</View>
@@ -88,10 +89,13 @@ const EditableRow = ({
                     autoCapitalize={autoCapitalize || 'none'}
                     placeholder={placeholder || ''}
                     placeholderTextColor="#4B5563"
+                    // ✅ Fix 2 — secureTextEntry applied
+                    secureTextEntry={isPassword}
                 />
             ) : (
                 <Text className="text-foreground text-sm font-semibold">
-                    {isPassword ? '••••••••' : value}
+                    {/* ✅ Fix 1 & 3 & 4 — mask password, Aadhaar, PAN in read mode */}
+                    {isPassword ? '••••••••' : (maskedValue ?? value) || '—'}
                 </Text>
             )}
         </View>
@@ -99,7 +103,6 @@ const EditableRow = ({
 );
 
 // ─── InfoRow (read-only) ──────────────────────────────────────────────────────
-
 const InfoRow = ({ label, value, icon }: { label: string; value: string; icon: React.ReactNode }) => (
     <View className="flex-row items-center gap-3 py-3 border-b border-border/10">
         <View className="w-7 items-center">{icon}</View>
@@ -110,8 +113,7 @@ const InfoRow = ({ label, value, icon }: { label: string; value: string; icon: R
     </View>
 );
 
-// ─── SectionCard ─────────────────────────────────────────────────────────────
-
+// ─── SectionCard ──────────────────────────────────────────────────────────────
 const SectionCard = ({
     title,
     icon,
@@ -178,8 +180,7 @@ const SectionCard = ({
     </View>
 );
 
-// ─── StatusBadge ─────────────────────────────────────────────────────────────
-
+// ─── StatusBadge ──────────────────────────────────────────────────────────────
 const StatusBadge = ({ status }: { status: string }) => {
     const config = {
         APPROVED: { bg: 'bg-green-500/10', border: 'border-green-500/20', text: 'text-green-400', dot: 'bg-green-500' },
@@ -195,8 +196,7 @@ const StatusBadge = ({ status }: { status: string }) => {
     );
 };
 
-// ─── Main Screen ─────────────────────────────────────────────────────────────
-
+// ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function AccountScreen() {
     const router = useRouter();
     const { showError, showSuccess } = useMessage();
@@ -209,7 +209,6 @@ export default function AccountScreen() {
     });
 
     const [isLoading, setIsLoading] = useState(true);
-    // const [refreshing, setRefreshing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [editSection, setEditSection] = useState<EditSection>(null);
 
@@ -236,7 +235,7 @@ export default function AccountScreen() {
     );
 
     const openEdit = (section: EditSection) => {
-        setPersonalForm({ ownerName: user.ownerName, phone: user.phone, password: user.password, newPassword: '' });
+        setPersonalForm({ ownerName: user.ownerName, phone: user.phone, password: '', newPassword: '' });
         setShopForm({ shopName: user.shopName, category: user.category, pincode: user.pincode });
         setKycForm({ panNumber: user.panNumber, aadharNumber: user.aadharNumber, gstNumber: user.gstNumber || '' });
         setEditSection(section);
@@ -250,18 +249,31 @@ export default function AccountScreen() {
             let payload: Record<string, any> = {};
 
             if (editSection === 'personal') {
-                if (!personalForm.ownerName || !personalForm.phone) throw new Error('Owner name and phone are required');
-                if (personalForm.password && personalForm.password === personalForm.newPassword) throw new Error('Passwords is same');
+                if (!personalForm.ownerName || !personalForm.phone)
+                    throw new Error('Owner name and phone are required');
+
+                // ✅ Fix 5 — corrected password validation logic
+                if (personalForm.password && !personalForm.newPassword)
+                    throw new Error('Please enter a new password');
+                if (personalForm.password && personalForm.newPassword &&
+                    personalForm.password === personalForm.newPassword)
+                    throw new Error('New password must be different from current password');
+
                 payload = {
                     ownerName: personalForm.ownerName,
                     phone: personalForm.phone,
-                    ...(personalForm.password && { password: personalForm.newPassword }),
+                    ...(personalForm.password && personalForm.newPassword && {
+                        password: personalForm.password,
+                        newPassword: personalForm.newPassword,
+                    }),
                 };
             } else if (editSection === 'shop') {
-                if (!shopForm.shopName || !shopForm.category || !shopForm.pincode) throw new Error('All shop details are required');
+                if (!shopForm.shopName || !shopForm.category || !shopForm.pincode)
+                    throw new Error('All shop details are required');
                 payload = shopForm;
             } else if (editSection === 'kyc') {
-                if (!kycForm.panNumber || !kycForm.aadharNumber) throw new Error('PAN and Aadhaar are required');
+                if (!kycForm.panNumber || !kycForm.aadharNumber)
+                    throw new Error('PAN and Aadhaar are required');
                 payload = {
                     panNumber: kycForm.panNumber.toUpperCase(),
                     aadharNumber: kycForm.aadharNumber,
@@ -272,7 +284,7 @@ export default function AccountScreen() {
             await api.put('/updateProfile', payload);
             setEditSection(null);
             showSuccess('Success', 'Profile updated successfully');
-            fetchPersonalDetails(true); // ✅ silent refetch
+            fetchPersonalDetails(true);
         } catch (error: any) {
             showError('Error', error?.response?.data?.message || error?.message || 'Update failed');
         } finally {
@@ -280,8 +292,19 @@ export default function AccountScreen() {
         }
     };
 
-    // ─── Skeleton ────────────────────────────────────────────────────────────
+    const TERMS_URL = 'https://indianutilityservices-legal.pages.dev/terms';
+    const PRIVACY_URL = 'https://indianutilityservices-legal.pages.dev/privacy-policy';
+    const REFUND_URL = 'https://indianutilityservices-legal.pages.dev/refund-policy';
+    const SUPPORT_EMAIL = 'support@indianutilityservices.in';
 
+    const showDeleteConfirm = () => {
+        showError(
+            'Delete Account',
+            `To permanently delete your vendor account and all associated data, contact us at ${SUPPORT_EMAIL}. Your wallet balance and pending settlements will be forfeited. This action is irreversible.`
+        );
+    };
+
+    // ─── Skeleton ─────────────────────────────────────────────────────────────
     if (isLoading) {
         return (
             <Screen hasTabBar={false}>
@@ -315,11 +338,20 @@ export default function AccountScreen() {
         );
     }
 
-    // ─── Main UI ─────────────────────────────────────────────────────────────
+    // ─── Masked values for sensitive fields ───────────────────────────────────
+    // ✅ Fix 3 — Aadhaar masked in read mode
+    const maskedAadhaar = user.aadharNumber
+        ? `●●●● ●●●● ${user.aadharNumber.slice(-4)}`
+        : '—';
+    // ✅ Fix 4 — PAN masked in read mode
+    const maskedPan = user.panNumber
+        ? `${user.panNumber.slice(0, 5)}####${user.panNumber.slice(-1)}`
+        : '—';
 
+    // ─── Main UI ──────────────────────────────────────────────────────────────
     return (
         <Screen hasTabBar={false}>
-            <View className="flex-1 bg-background ">
+            <View className="flex-1 bg-background">
 
                 {/* Header */}
                 <LinearGradient
@@ -340,7 +372,6 @@ export default function AccountScreen() {
                 </LinearGradient>
 
                 <KeyboardAwareScrollView
-                    // refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                     enableOnAndroid
                     extraScrollHeight={32}
                     keyboardShouldPersistTaps="handled"
@@ -413,13 +444,15 @@ export default function AccountScreen() {
                             keyboardType="phone-pad"
                             placeholder="Phone number"
                         />
+                        {/* ✅ Fix 1 — isPassword passed, masks in read mode & secureTextEntry in edit mode */}
                         <EditableRow
-                            label={editSection === 'personal' ? 'Old Password' : 'Password'}
+                            label={editSection === 'personal' ? 'Current Password' : 'Password'}
                             value={editSection === 'personal' ? personalForm.password : user.password}
                             icon={<Ionicons name="lock-closed-outline" size={15} color="#9CA3AF" />}
                             isEditing={editSection === 'personal'}
+                            isPassword={true}
                             onChangeText={(v) => setPersonalForm(p => ({ ...p, password: v }))}
-                            placeholder="Leave blank to keep current"
+                            placeholder="Enter current password to change"
                         />
                         {editSection === 'personal' && personalForm.password.length > 0 && (
                             <EditableRow
@@ -427,8 +460,9 @@ export default function AccountScreen() {
                                 value={personalForm.newPassword}
                                 icon={<Ionicons name="lock-closed-outline" size={15} color="#00ADB5" />}
                                 isEditing={true}
+                                isPassword={true}
                                 onChangeText={(v) => setPersonalForm(p => ({ ...p, newPassword: v }))}
-                                placeholder="Enter new password or Leave blank"
+                                placeholder="Enter new password"
                             />
                         )}
                     </SectionCard>
@@ -484,9 +518,11 @@ export default function AccountScreen() {
                         onCancel={handleCancel}
                         isSaving={isSaving}
                     >
+                        {/* ✅ Fix 4 — PAN masked in read mode via maskedValue */}
                         <EditableRow
                             label="PAN Number"
                             value={editSection === 'kyc' ? kycForm.panNumber : user.panNumber}
+                            maskedValue={maskedPan}
                             icon={<MaterialCommunityIcons name="card-account-details-outline" size={15} color="#9CA3AF" />}
                             isEditing={editSection === 'kyc'}
                             onChangeText={(v) => setKycForm(p => ({ ...p, panNumber: v.toUpperCase() }))}
@@ -494,9 +530,11 @@ export default function AccountScreen() {
                             maxLength={10}
                             placeholder="ABCDE1234F"
                         />
+                        {/* ✅ Fix 3 — Aadhaar masked in read mode via maskedValue */}
                         <EditableRow
                             label="Aadhaar Number"
                             value={editSection === 'kyc' ? kycForm.aadharNumber : user.aadharNumber}
+                            maskedValue={maskedAadhaar}
                             icon={<MaterialCommunityIcons name="id-card" size={15} color="#9CA3AF" />}
                             isEditing={editSection === 'kyc'}
                             onChangeText={(v) => setKycForm(p => ({ ...p, aadharNumber: v }))}
@@ -504,7 +542,6 @@ export default function AccountScreen() {
                             maxLength={12}
                             placeholder="12-digit Aadhaar"
                         />
-                        {/* GST: show always in edit mode, only if value in read mode */}
                         {(user.gstNumber || editSection === 'kyc') && (
                             <EditableRow
                                 label="GST Number (optional)"
@@ -520,7 +557,7 @@ export default function AccountScreen() {
                     </SectionCard>
 
                     {/* ── Account Info (read-only) ── */}
-                    <View className='mb-14'>
+                    <View>
                         <SectionCard
                             title="Account Info"
                             iconBg="bg-green-500/10"
@@ -558,12 +595,91 @@ export default function AccountScreen() {
                             <InfoRow
                                 label="Joined On"
                                 value={user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-IN', {
-                                    day: 'numeric', month: 'long', year: 'numeric'
+                                    day: 'numeric', month: 'long', year: 'numeric',
                                 }) : '—'}
                                 icon={<Ionicons name="calendar-outline" size={15} color="#9CA3AF" />}
                             />
                         </SectionCard>
                     </View>
+
+                    {/* ── Privacy & Security ── */}
+                    <View className="mb-14 rounded-2xl border border-border/20 bg-card/30 overflow-hidden">
+                        <View className="flex-row items-center gap-3 px-4 pt-4 pb-3 border-b border-border/10">
+                            <View className="w-8 h-8 bg-primary/10 rounded-lg items-center justify-center">
+                                <Ionicons name="shield-outline" size={16} color="#00ADB5" />
+                            </View>
+                            <Text className="text-foreground text-sm font-bold">Privacy & Security</Text>
+                        </View>
+
+                        {/* Terms of Use */}
+                        <Pressable
+                            onPress={() => Linking.openURL(TERMS_URL)}
+                            className="flex-row items-center gap-3 px-4 py-3.5 border-b border-border/10 active:opacity-70"
+                        >
+                            <View className="w-8 h-8 rounded-lg items-center justify-center bg-blue-500/10">
+                                <Ionicons name="document-text-outline" size={16} color="#3B82F6" />
+                            </View>
+                            <Text className="flex-1 text-foreground text-sm font-semibold">Terms of Use</Text>
+                            <Ionicons name="open-outline" size={14} color="#4B5563" />
+                        </Pressable>
+
+                        {/* Privacy Policy */}
+                        <Pressable
+                            onPress={() => Linking.openURL(PRIVACY_URL)}
+                            className="flex-row items-center gap-3 px-4 py-3.5 border-b border-border/10 active:opacity-70"
+                        >
+                            <View className="w-8 h-8 rounded-lg items-center justify-center bg-green-500/10">
+                                <Ionicons name="shield-checkmark-outline" size={16} color="#10B981" />
+                            </View>
+                            <Text className="flex-1 text-foreground text-sm font-semibold">Privacy Policy</Text>
+                            <Ionicons name="open-outline" size={14} color="#4B5563" />
+                        </Pressable>
+
+                        {/* Refund Policy */}
+                        <Pressable
+                            onPress={() => Linking.openURL(REFUND_URL)}
+                            className="flex-row items-center gap-3 px-4 py-3.5 border-b border-border/10 active:opacity-70"
+                        >
+                            <View className="w-8 h-8 rounded-lg items-center justify-center bg-amber-500/10">
+                                <Ionicons name="receipt-outline" size={16} color="#F59E0B" />
+                            </View>
+                            <Text className="flex-1 text-foreground text-sm font-semibold">Refund & Cancellation Policy</Text>
+                            <Ionicons name="open-outline" size={14} color="#4B5563" />
+                        </Pressable>
+
+                        {/* Contact Support */}
+                        <Pressable
+                            onPress={() => Linking.openURL(`mailto:${SUPPORT_EMAIL}`)}
+                            className="flex-row items-center gap-3 px-4 py-3.5 border-b border-border/10 active:opacity-70"
+                        >
+                            <View className="w-8 h-8 rounded-lg items-center justify-center bg-primary/10">
+                                <Ionicons name="mail-outline" size={16} color="#00ADB5" />
+                            </View>
+                            <View className="flex-1">
+                                <Text className="text-foreground text-sm font-semibold">Contact Support</Text>
+                                <Text className="text-muted-foreground text-[10px] mt-0.5">{SUPPORT_EMAIL}</Text>
+                            </View>
+                            <Ionicons name="open-outline" size={14} color="#4B5563" />
+                        </Pressable>
+
+                        {/* Delete Account */}
+                        <Pressable
+                            onPress={showDeleteConfirm}
+                            className="flex-row items-center gap-3 px-4 py-3.5 active:opacity-70"
+                        >
+                            <View className="w-8 h-8 rounded-lg items-center justify-center bg-red-500/10">
+                                <Ionicons name="trash-outline" size={16} color="#EF4444" />
+                            </View>
+                            <View className="flex-1">
+                                <Text className="text-red-400 text-sm font-semibold">Delete Account</Text>
+                                <Text className="text-muted-foreground text-[10px] mt-0.5">
+                                    Permanently delete your vendor account and data
+                                </Text>
+                            </View>
+                            <Ionicons name="chevron-forward" size={14} color="#4B5563" />
+                        </Pressable>
+                    </View>
+
                 </KeyboardAwareScrollView>
             </View>
         </Screen>

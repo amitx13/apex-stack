@@ -30,10 +30,10 @@ type Settlement = {
 };
 
 const statusConfig = {
-    PENDING:   { bg: 'bg-orange-500/10', border: 'border-orange-500/20', text: 'text-orange-400',  dot: 'bg-orange-400',  label: 'Pending'   },
-    APPROVED:  { bg: 'bg-blue-500/10',   border: 'border-blue-500/20',   text: 'text-blue-400',    dot: 'bg-blue-400',    label: 'Approved'  },
-    COMPLETED: { bg: 'bg-green-500/10',  border: 'border-green-500/20',  text: 'text-green-400',   dot: 'bg-green-500',   label: 'Completed' },
-    REJECTED:  { bg: 'bg-red-500/10',    border: 'border-red-500/20',    text: 'text-red-400',     dot: 'bg-red-500',     label: 'Rejected'  },
+    PENDING: { bg: 'bg-orange-500/10', border: 'border-orange-500/20', text: 'text-orange-400', dot: 'bg-orange-400', label: 'Pending' },
+    APPROVED: { bg: 'bg-blue-500/10', border: 'border-blue-500/20', text: 'text-blue-400', dot: 'bg-blue-400', label: 'Approved' },
+    COMPLETED: { bg: 'bg-green-500/10', border: 'border-green-500/20', text: 'text-green-400', dot: 'bg-green-500', label: 'Completed' },
+    REJECTED: { bg: 'bg-red-500/10', border: 'border-red-500/20', text: 'text-red-400', dot: 'bg-red-500', label: 'Rejected' },
 };
 
 export default function SettlementScreen() {
@@ -78,7 +78,7 @@ export default function SettlementScreen() {
         setIsRequesting(true);
         try {
             await api.post('/requestInstantSettlement');
-            showSuccess('Requested', 'Settlement request submitted. Admin will process it shortly.');
+            showSuccess('Requested', 'Settlement request submitted. Admin will process it within 24–48 hours.');
             await fetchData(true);
         } catch (error: any) {
             showError('Error', error?.response?.data?.message || 'Failed to request settlement');
@@ -218,6 +218,15 @@ export default function SettlementScreen() {
                             )}
                         </LinearGradient>
                     </Pressable>
+                    
+                    {!hasPending && (wallet?.balance ?? 0) > 0 && (
+                        <View className="flex-row items-center gap-2 bg-primary/5 border border-primary/15 rounded-xl px-3 py-2.5">
+                            <Ionicons name="information-circle-outline" size={15} color="#00ADB5" />
+                            <Text className="text-muted-foreground text-[11px] flex-1 leading-relaxed">
+                                Settlement requests are manually processed by admin. Amount will be transferred to your registered bank account within 24–48 hours.
+                            </Text>
+                        </View>
+                    )}
 
                     {hasPending && (
                         <View className="flex-row items-center gap-2 bg-orange-500/10 border border-orange-500/20 rounded-xl px-3 py-2.5">
