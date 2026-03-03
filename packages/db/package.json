@@ -2,8 +2,8 @@
   "name": "@repo/db",
   "version": "0.0.0",
   "private": true,
-  "main": ".dist/index.js",
-  "types": ".dist/index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
     "db:generate": "prisma generate",
