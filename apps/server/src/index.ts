@@ -55,9 +55,9 @@ app.use('/api/v1/admin', adminRoutes)
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 
-// startReentryCron()
-// startSettlementCron()
-// startAutopayCorn()
+startReentryCron()
+startSettlementCron()
+startAutopayCorn()
 
 app.use(errorHandler);
 
