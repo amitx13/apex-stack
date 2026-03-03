@@ -27,11 +27,13 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, origin);
-    } else {
-      callback(new Error('Not allowed by CORS'));
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
     }
+
+    return callback(new Error('Not allowed by CORS'));
   },
   credentials: true
 }));
@@ -55,12 +57,12 @@ app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 // startReentryCron()
 // startSettlementCron()
-//startAutopayCorn()
+// startAutopayCorn()
 
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
