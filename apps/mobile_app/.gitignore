@@ -11,7 +11,11 @@ expo-env.d.ts
 
 google-services.json
 
-build-1772521905233.apk
+*.apk
+*.aab
+build-*.apk
+/android/
+
 
 # Native
 .kotlin/
