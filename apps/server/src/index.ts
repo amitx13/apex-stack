@@ -21,8 +21,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
 
 const allowedOrigins = [
-  'http://localhost:5173',
-  'http://192.168.31.185:8081'
+  'https://admin.indianutilityservices.com',
 ];
 
 app.use(cors({
