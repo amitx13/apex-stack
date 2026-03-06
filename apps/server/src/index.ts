@@ -12,6 +12,7 @@ import rechargeRoutes from "./routes/recharge.routes.js"
 import bbpsRoutes from "./routes/bbps.routes.js"
 import { startAutopayCorn, startReentryCron, startSettlementCron } from "./jobs/cron.js";
 import cookieParser from "cookie-parser";
+import axios from "axios";
 
 dotenv.config();
 
@@ -42,6 +43,11 @@ app.use(cookieParser());
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
+});
+
+app.get("/bal", (_req, res) => {
+  const response = axios.get('https://partner.imwallet.in/web_services/checkBal.jsp?webToken=ZZsE9pasx9FNYktRLloxBhiVTm2HySvg&userCode=IMAPI8464215')
+  res.json({ response });
 });
 
 app.use('/api/v1', userRoutes);
