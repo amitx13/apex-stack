@@ -11,7 +11,7 @@ export async function initializeAdmin() {
   console.log('\n🔧 Initializing Admin Account...\n');
 
   // 1. Create or find admin user
-  const adminPhone = '9999999999';
+  const adminPhone = '7096664422';
   const adminPassword ='Ius@1987';
 
   let admin = await prisma.user.findUnique({
