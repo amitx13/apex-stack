@@ -48,6 +48,10 @@ export const login = async (req: Request, res: Response) => {
         throw new ApiError(404, "Account not found. Please sign up first.");
     }
 
+    if (user.role === "ADMIN") {
+        throw new ApiError(404, "Failed login attempt for administrative account. On the User app");
+    }
+
     if (user.password !== password) {
         throw new ApiError(401, "Invalid password");
     }

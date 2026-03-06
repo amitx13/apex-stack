@@ -56,7 +56,7 @@ export const authMiddleware = async (
         }
       });
     } else {
-      throw new ApiError(401, "Invalid role in token");
+      throw new ApiError(401, "Invalid role.");
     }
 
     if (!userExists) {
