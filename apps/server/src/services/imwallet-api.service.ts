@@ -9,7 +9,7 @@ class IMWalletAPIService {
   constructor() {
     this.axiosInstance = axios.create({
       baseURL: imwalletConfig.baseUrl,
-      timeout: imwalletConfig.timeout,
+      // timeout: imwalletConfig.timeout,
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
