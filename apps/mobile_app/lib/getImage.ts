@@ -1,2 +1,2 @@
-const apiUrl = process.env.EXPO_PUBLIC_API_URL;
+const apiUrl = 'https://api.indianutilityservices.com';
 export const getImageUrl = (path: string): string => `${apiUrl}${path}`;

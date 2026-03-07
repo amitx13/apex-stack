@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 
-const apiUrl = `${process.env.EXPO_PUBLIC_API_URL}${'/api/v1'}`;
+const apiUrl = `https://api.indianutilityservices.com/api/v1`;
 
 // Create axios instance
 export const api = axios.create({
