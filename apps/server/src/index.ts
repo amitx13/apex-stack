@@ -54,7 +54,6 @@ app.use('/api/v1/bbps', bbpsRoutes)
 app.use('/api/v1/admin', adminRoutes)
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
-
 startReentryCron()
 startSettlementCron()
 startAutopayCorn()

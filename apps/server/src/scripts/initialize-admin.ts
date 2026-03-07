@@ -11,8 +11,14 @@ export async function initializeAdmin() {
   console.log('\n🔧 Initializing Admin Account...\n');
 
   // 1. Create or find admin user
-  const adminPhone = '7096664422';
-  const adminPassword ='Ius@1987';
+  const adminPhone = process.env.ADMIN_PHONE;
+  const adminId = process.env.ADMIN_ID;
+  const adminPassword = process.env.ADMIN_PASSWORD;
+
+  if(!adminId || !adminPassword || !adminPhone){
+    console.log(`Admin can't be created`);
+    return
+  }
 
   let admin = await prisma.user.findUnique({
     where: { phone: adminPhone },
@@ -21,6 +27,7 @@ export async function initializeAdmin() {
   if (!admin) {
     admin = await prisma.user.create({
       data: {
+        id: adminId,
         name: 'Admin',
         phone: adminPhone,
         code: 'IUS9i6',
