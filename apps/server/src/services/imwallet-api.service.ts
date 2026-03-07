@@ -43,7 +43,6 @@ class IMWalletAPIService {
         msg: response.data.msg,
       };
     } catch (error: any) {
-      console.log("IMWallet error", error)
       console.log('IMWallet checkBalance error:', error.message);
       throw new ApiError(503, 'IMWallet service unavailable. Please try again later.');
     }

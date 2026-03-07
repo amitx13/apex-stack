@@ -45,27 +45,6 @@ app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
-app.get("/bal", async (_req, res) => {
-  try {
-    const response = await axios.get(
-      "https://partner.imwallet.in/web_services/checkBal.jsp",
-      {
-        params: {
-          webToken: "ZZsE9pasx9FNYktRLloxBhiVTm2HySvg",
-          userCode: "IMAPI8464215",
-        },
-      }
-    );
-
-    res.json(response.data);
-  } catch (error: any) {
-    res.status(500).json({
-      message: "Failed to fetch balance",
-      error: error.message,
-    });
-  }
-});
-
 app.use('/api/v1', userRoutes);
 app.use('/api/v1', autopay);
 app.use('/api/v1/payment', paymentRoutes);
