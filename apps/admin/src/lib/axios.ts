@@ -1,5 +1,5 @@
 import axios from 'axios';
-const VITE_BASE_URL = import.meta.env.VITE_BASE_URL!;
+const VITE_BASE_URL = 'https://api.indianutilityservices.com';
 
 //192.168.31.185
 
