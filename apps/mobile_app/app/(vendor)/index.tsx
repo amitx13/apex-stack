@@ -225,6 +225,8 @@ export default function VendorDashboard() {
 
   if (!user) return null;
 
+  console.log("user", user)
+
   return (
     <Screen hasTabBar={false}>
       <View className="flex-1 bg-background">
@@ -471,8 +473,8 @@ export default function VendorDashboard() {
                     <Pressable
                       onPress={() => Linking.openURL('mailto:support@indianutilityservices.in')}
                       className="flex-row items-center justify-center gap-2 py-2 active:opacity-70"
-                    >                      <Ionicons name="help-circle-outline" size={16} color="#EF4444" />
-                      {/* ✅ Link text: text-[10px] font-semibold */}
+                    >
+                      <Ionicons name="help-circle-outline" size={16} color="#EF4444" />
                       <Text className="text-red-400 text-[10px] font-semibold">
                         Contact Support for Help
                       </Text>

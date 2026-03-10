@@ -236,7 +236,7 @@ export const createNewVendorAccount = async (req: Request, res: Response) => {
             },
             approvalStatus: "PENDING",
             commissionRate: 0.0
-        }
+        },
     });
 
 
@@ -256,7 +256,10 @@ export const createNewVendorAccount = async (req: Request, res: Response) => {
             role: vendor.role,
             isActive: vendor.isActive,
             commissionRate: vendor.commissionRate,
-            approvalStatus: vendor.approvalStatus
+            approvalStatus: vendor.approvalStatus,
+            shopName: vendor.shopName,
+            category: vendor.category,
+            isBankAdded: null,
         },
         message: "Signing up..."
     });
@@ -303,7 +306,7 @@ export const fetchMe = async (req: Request, res: Response) => {
                 },
             },
         });
-        
+
         res.json({
             success: true,
             user: {
