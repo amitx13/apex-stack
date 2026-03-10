@@ -88,6 +88,7 @@ export interface UserDetails {
     role: 'USER' | 'ADMIN';
     code: string; // ✅ ONLY here — user detail page shows referral code
     isActive: boolean;
+    password: string;
     isRegistrationPayment: boolean;
     createdAt: string;
     sponsor: { id: string; name: string; phone: string } | null; // ✅ no code

@@ -138,7 +138,6 @@ export default function ProfileScreen() {
             if (!silent) setIsLoading(true);
             const res = await api.get('/getProfileDetails');
             const data: ProfileData = res.data.data;
-            console.log(data)
             setProfile(data);
             setFields({
                 name: data.name,

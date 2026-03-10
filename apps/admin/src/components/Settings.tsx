@@ -4,6 +4,7 @@ import { Eye, EyeOff, User, Lock, Banknote, QrCode, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import api from '@/lib/axios';
+import { getImageUrl } from '@/lib/const';
 
 // ── Types ──────────────────────────────────────────────────
 interface BankDetail {
@@ -81,7 +82,7 @@ export default function Settings() {
                     setUpiId(data.bankDetails.upiId || '');
                     setGPay(data.bankDetails.gPay || '');
                     if (data.bankDetails.qrCode) {
-                        setExistingQr(`http://192.168.31.185:3000${data.bankDetails.qrCode}`);
+                        setExistingQr(getImageUrl(data.bankDetails.qrCode));
                     }
                 }
             } catch {

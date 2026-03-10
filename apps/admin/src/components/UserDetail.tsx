@@ -7,6 +7,9 @@ import {
     ArrowLeft, CheckCircle2, XCircle, Wallet,
     Building2, GitBranch, ArrowDownToLine,
     FileText, CalendarClock, Receipt, ShieldCheck,
+    Check,
+    X,
+    Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type {
@@ -23,19 +26,19 @@ const DUE_DATE_LABEL: Record<string, string> = {
 };
 
 const WITHDRAWAL_STATUS_STYLE: Record<string, string> = {
-    PENDING:   "text-amber-400 bg-amber-400/10 border-amber-400/20",
-    APPROVED:  "text-blue-400 bg-blue-400/10 border-blue-400/20",
-    REJECTED:  "text-red-400 bg-red-400/10 border-red-400/20",
+    PENDING: "text-amber-400 bg-amber-400/10 border-amber-400/20",
+    APPROVED: "text-blue-400 bg-blue-400/10 border-blue-400/20",
+    REJECTED: "text-red-400 bg-red-400/10 border-red-400/20",
     COMPLETED: "text-green-400 bg-green-400/10 border-green-400/20",
 };
 
 const AUTOPAY_STATUS_STYLE: Record<string, string> = {
     PENDING_APPROVAL: "text-amber-400 bg-amber-400/10 border-amber-400/20",
-    APPROVED:         "text-blue-400 bg-blue-400/10 border-blue-400/20",
-    ACTIVE:           "text-green-400 bg-green-400/10 border-green-400/20",
-    PAUSED:           "text-orange-400 bg-orange-400/10 border-orange-400/20",
-    CANCELLED:        "text-red-400 bg-red-400/10 border-red-400/20",
-    REJECTED:         "text-red-400 bg-red-400/10 border-red-400/20",
+    APPROVED: "text-blue-400 bg-blue-400/10 border-blue-400/20",
+    ACTIVE: "text-green-400 bg-green-400/10 border-green-400/20",
+    PAUSED: "text-orange-400 bg-orange-400/10 border-orange-400/20",
+    CANCELLED: "text-red-400 bg-red-400/10 border-red-400/20",
+    REJECTED: "text-red-400 bg-red-400/10 border-red-400/20",
 };
 
 // ── Helpers ────────────────────────────────────────────────
@@ -43,19 +46,24 @@ const Skeleton = ({ className }: { className?: string }) => (
     <div className={`animate-pulse rounded-lg bg-secondary/60 ${className}`} />
 );
 
-const SectionCard = ({ title, icon: Icon, children }: {
+const SectionCard = ({ title, icon: Icon, children, action }: {
     title: string;
     icon: React.ElementType;
     children: React.ReactNode;
+    action?: React.ReactNode;
 }) => (
     <div className="rounded-xl border border-border bg-card overflow-hidden">
-        <div className="px-5 py-4 border-b border-border flex items-center gap-2">
-            <Icon className="w-4 h-4 text-primary" />
-            <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+        <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+            <div className="flex items-center gap-2">
+                <Icon className="w-4 h-4 text-primary" />
+                <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+            </div>
+            {action && action}
         </div>
         <div className="p-5">{children}</div>
     </div>
 );
+
 
 const InfoRow = ({ label, value }: { label: string; value: React.ReactNode }) => (
     <div className="flex items-start justify-between py-2 border-b border-border last:border-0">
@@ -101,6 +109,14 @@ export const UserDetail = () => {
     const [apPage, setApPage] = useState(1);
     const [apMeta, setApMeta] = useState<PaginationMeta | null>(null);
 
+    const [isEditing, setIsEditing] = useState(false);
+    const [editData, setEditData] = useState({
+        name: "",
+        phone: "",
+        password: "",
+    });
+    const [isSaving, setIsSaving] = useState(false);
+
     const isAdmin = user?.role === "ADMIN";
 
     // ── Loaders ──────────────────────────────────────────
@@ -109,6 +125,11 @@ export const UserDetail = () => {
             setLoading(true);
             const res = await api.get(`/users/${userId}`);
             setUser(res.data.data);
+            setEditData({
+                name: res.data.data.name,
+                phone: res.data.data.phone,
+                password: ""
+            })
         } catch (error: any) {
             toast.error(error.response?.data?.message || "Failed to load member details");
         } finally {
@@ -175,6 +196,48 @@ export const UserDetail = () => {
         }
     };
 
+    const handleSave = async () => {
+        if (!user) return;
+
+        if (
+            editData.name === user.name &&
+            editData.phone === user.phone &&
+            !editData.password
+        ) {
+            setIsEditing(false);
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            const body: Record<string, string> = {};
+            if (editData.name !== user.name) body.name = editData.name;
+            if (editData.phone !== user.phone) body.phone = editData.phone;
+            if (editData.password) body.password = editData.password;
+
+            await api.patch(`/admin/users/${user.id}`, body);
+
+            await loadUser(); // replace with your actual refetch
+
+            setIsEditing(false);
+        } catch (err: any) {
+            console.error(err);
+            toast.error(err.response?.data?.message ?? "Something went wrong");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+
+    const handleCancel = () => {
+        setEditData({
+            name: user?.name ?? "",
+            phone: user?.phone ?? "",
+            password: ""
+        });
+        setIsEditing(false);
+    };
+
     if (loading) return (
         <div className="space-y-4">
             <Skeleton className="h-10 w-40" />
@@ -206,11 +269,10 @@ export const UserDetail = () => {
                         <div className="flex items-center gap-2">
                             <h1 className="text-2xl font-bold text-foreground">{user.name}</h1>
                             {/* Role badge in header */}
-                            <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${
-                                isAdmin
-                                    ? "text-violet-400 bg-violet-400/10 border-violet-400/20"
-                                    : "text-cyan-400 bg-cyan-400/10 border-cyan-400/20"
-                            }`}>
+                            <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${isAdmin
+                                ? "text-violet-400 bg-violet-400/10 border-violet-400/20"
+                                : "text-cyan-400 bg-cyan-400/10 border-cyan-400/20"
+                                }`}>
                                 {isAdmin ? "Admin" : "Member"}
                             </span>
                         </div>
@@ -234,9 +296,89 @@ export const UserDetail = () => {
 
             {/* ── Basic Info — always shown, Referred By only for members ── */}
             <div className={`grid gap-4 ${!isAdmin ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1 md:grid-cols-1 max-w-lg"}`}>
-                <SectionCard title="Basic Information" icon={ShieldCheck}>
-                    <InfoRow label="Full Name" value={user.name} />
-                    <InfoRow label="Phone Number" value={user.phone} />
+                <SectionCard
+                    title="Basic Information"
+                    icon={ShieldCheck}
+                    // Pass edit toggle buttons into the card header via a prop (if SectionCard supports it)
+                    action={
+                        isEditing ? (
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={handleSave}
+                                    disabled={isSaving}
+                                    className="flex items-center gap-1 text-xs text-green-400 hover:text-green-300 transition-colors disabled:opacity-50"
+                                >
+                                    <Check size={14} />
+                                    {isSaving ? "Saving..." : "Save"}
+                                </button>
+                                <button
+                                    onClick={handleCancel}
+                                    className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300 transition-colors"
+                                >
+                                    <X size={14} />
+                                    Cancel
+                                </button>
+                            </div>
+                        ) : (
+                            <button
+                                onClick={() => setIsEditing(true)}
+                                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+                            >
+                                <Pencil size={14} />
+                                Edit
+                            </button>
+                        )
+                    }
+                >
+                    {/* ── Editable Fields ── */}
+                    <InfoRow
+                        label="Full Name"
+                        value={
+                            isEditing ? (
+                                <input
+                                    type="text"
+                                    value={editData.name}
+                                    onChange={(e) => setEditData((p) => ({ ...p, name: e.target.value }))}
+                                    className="bg-transparent border-b border-primary/50 focus:border-primary outline-none text-sm text-foreground w-full pb-0.5 transition-colors"
+                                />
+                            ) : (
+                                user.name
+                            )
+                        }
+                    />
+                    <InfoRow
+                        label="Phone Number"
+                        value={
+                            isEditing ? (
+                                <input
+                                    type="tel"
+                                    value={editData.phone}
+                                    onChange={(e) => setEditData((p) => ({ ...p, phone: e.target.value }))}
+                                    className="bg-transparent border-b border-primary/50 focus:border-primary outline-none text-sm text-foreground w-full pb-0.5 transition-colors"
+                                />
+                            ) : (
+                                user.phone
+                            )
+                        }
+                    />
+                    <InfoRow
+                        label="Password"
+                        value={
+                            isEditing ? (
+                                <input
+                                    type="text" // visible as per your previous preference
+                                    placeholder="Enter new password"
+                                    value={editData.password}
+                                    onChange={(e) => setEditData((p) => ({ ...p, password: e.target.value }))}
+                                    className="bg-transparent border-b border-primary/50 focus:border-primary outline-none text-sm text-foreground w-full pb-0.5 transition-colors placeholder:text-muted-foreground/50"
+                                />
+                            ) : (
+                                user.password
+                            )
+                        }
+                    />
+
+                    {/* ── Read-only Fields (unchanged) ── */}
                     <InfoRow label="Referral Code" value={
                         <span className="font-mono text-primary">{user.code}</span>
                     } />
@@ -248,7 +390,6 @@ export const UserDetail = () => {
                     <InfoRow label="Joined On" value={
                         new Date(user.createdAt).toLocaleDateString("en-IN", { dateStyle: "long" })
                     } />
-                    {/* Registration payment & status only relevant for members */}
                     {!isAdmin && (
                         <>
                             <InfoRow label="Registration Payment" value={
@@ -264,6 +405,7 @@ export const UserDetail = () => {
                         </>
                     )}
                 </SectionCard>
+
 
                 {/* Referred By — members only */}
                 {!isAdmin && (
@@ -299,17 +441,16 @@ export const UserDetail = () => {
                 Member → all 3 wallets
             ── */}
             <SectionCard title="Wallet Balances" icon={Wallet}>
-                <div className={`grid gap-4 ${
-                    isAdmin
-                        ? "grid-cols-1 max-w-xs"
-                        : "grid-cols-1 sm:grid-cols-3"
-                }`}>
+                <div className={`grid gap-4 ${isAdmin
+                    ? "grid-cols-1 max-w-xs"
+                    : "grid-cols-1 sm:grid-cols-3"
+                    }`}>
                     {(isAdmin
                         ? [{ type: "WITHDRAWAL", label: "Withdrawal Wallet", color: "text-green-400 border-green-400/20 bg-green-400/5" }]
                         : [
-                            { type: "SPEND",      label: "Spending Wallet",    color: "text-cyan-400 border-cyan-400/20 bg-cyan-400/5" },
-                            { type: "INCENTIVE",  label: "Incentive Wallet",    color: "text-violet-400 border-violet-400/20 bg-violet-400/5" },
-                            { type: "WITHDRAWAL", label: "Withdrawal Wallet",  color: "text-green-400 border-green-400/20 bg-green-400/5" },
+                            { type: "SPEND", label: "Spending Wallet", color: "text-cyan-400 border-cyan-400/20 bg-cyan-400/5" },
+                            { type: "INCENTIVE", label: "Incentive Wallet", color: "text-violet-400 border-violet-400/20 bg-violet-400/5" },
+                            { type: "WITHDRAWAL", label: "Withdrawal Wallet", color: "text-green-400 border-green-400/20 bg-green-400/5" },
                         ]
                     ).map(w => (
                         <div key={w.type} className={`rounded-xl border p-4 ${w.color}`}>
@@ -451,14 +592,13 @@ export const UserDetail = () => {
                                                 {new Date(b.createdAt).toLocaleDateString("en-IN", { dateStyle: "medium" })}
                                             </p>
                                         </div>
-                                        <span className={`text-xs px-2 py-1 rounded-full border font-medium ${
-                                            b.status === "COMPLETED" ? "text-green-400 bg-green-400/10 border-green-400/20"
+                                        <span className={`text-xs px-2 py-1 rounded-full border font-medium ${b.status === "COMPLETED" ? "text-green-400 bg-green-400/10 border-green-400/20"
                                             : b.status === "REJECTED" ? "text-red-400 bg-red-400/10 border-red-400/20"
-                                            : "text-amber-400 bg-amber-400/10 border-amber-400/20"
-                                        }`}>
+                                                : "text-amber-400 bg-amber-400/10 border-amber-400/20"
+                                            }`}>
                                             {b.status === "COMPLETED" ? "Approved"
-                                             : b.status === "REJECTED" ? "Rejected"
-                                             : "Pending"}
+                                                : b.status === "REJECTED" ? "Rejected"
+                                                    : "Pending"}
                                         </span>
                                     </div>
                                 ))}
@@ -526,11 +666,10 @@ export const UserDetail = () => {
                         <div className="space-y-1">
                             {txns.map(txn => (
                                 <div key={txn.id} className="flex items-center gap-4 py-2.5 border-b border-border last:border-0">
-                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                                        txn.type === "CREDIT"
-                                            ? "bg-green-400/10 border border-green-400/20"
-                                            : "bg-red-400/10 border border-red-400/20"
-                                    }`}>
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${txn.type === "CREDIT"
+                                        ? "bg-green-400/10 border border-green-400/20"
+                                        : "bg-red-400/10 border border-red-400/20"
+                                        }`}>
                                         {txn.type === "CREDIT"
                                             ? <CheckCircle2 className="w-4 h-4 text-green-400" />
                                             : <XCircle className="w-4 h-4 text-red-400" />
@@ -544,9 +683,8 @@ export const UserDetail = () => {
                                             {txn.wallet.type} Wallet · {new Date(txn.createdAt).toLocaleDateString("en-IN", { dateStyle: "medium" })}
                                         </p>
                                     </div>
-                                    <p className={`text-sm font-bold flex-shrink-0 ${
-                                        txn.type === "CREDIT" ? "text-green-400" : "text-red-400"
-                                    }`}>
+                                    <p className={`text-sm font-bold flex-shrink-0 ${txn.type === "CREDIT" ? "text-green-400" : "text-red-400"
+                                        }`}>
                                         {txn.type === "CREDIT" ? "+" : "-"}{Number(txn.points).toLocaleString("en-IN")} pts
                                     </p>
                                 </div>

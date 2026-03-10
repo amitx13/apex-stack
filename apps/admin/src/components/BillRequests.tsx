@@ -118,7 +118,6 @@ export default function BillRequests() {
             const res = await api.get('/bill-requests', {
                 params: { page, limit: 15, search, status, from, to },
             });
-            // console.log(res.data.data.billRequests)
             setBillRequests(res.data.data.billRequests);
             setSummary(res.data.data.summary);
             setPagination(res.data.data.pagination);
@@ -170,8 +169,6 @@ export default function BillRequests() {
 
         copied ? toast.success("Copied!") : toast.error("Copy failed");
     };
-
-    // console.log(previewUrl)
 
     return (
         <div className="space-y-5">

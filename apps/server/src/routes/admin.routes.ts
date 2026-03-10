@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { adminLogin, fetchAdminDetails, getAdminDashboardData, getAdminProfile, updateAdminBank, updateAdminPassword, updateAdminProfile } from '../controllers/admin/admin.auth.controller';
 import { asyncHandler } from '../middlewares/asyncHandler';
 import { adminAuthMiddleware } from '../middlewares/adminAuth';
-import { activateUser, adjustWallet, approveAutoPayController, approvePayment, approveVendor, checkServiceStatus, completeAutoPayExecutionController, completeBillRequestController, completeVendorWithdrawal, createRechargePlan, deleteRechargePlan, getAutoPays, getBillRequests, getIMWalletBalance, getPayments, getRechargePlans, getReentryQueue, getServiceTransactions, getTransactions, getUserAutoPay, getUserBills, getUserDetails, getUsers, getUserTransactions, getUserWithdrawals, getVendorDetail, getVendors, getVendorWithdrawals, getWallets, getWithdrawals, rejectAutoPayController, rejectAutoPayExecutionController, rejectBillRequestController, rejectPayment, rejectVendor, rejectVendorWithdrawal, toggleRechargePlan, updateRechargePlan, updateWithdrawal } from '../controllers/admin/admin.users.controller';
+import { activateUser, adjustWallet, adminUpdateUserProfile, approveAutoPayController, approvePayment, approveVendor, checkServiceStatus, completeAutoPayExecutionController, completeBillRequestController, completeVendorWithdrawal, createRechargePlan, deleteRechargePlan, getAutoPays, getBillRequests, getIMWalletBalance, getPayments, getRechargePlans, getReentryQueue, getServiceTransactions, getTransactions, getUserAutoPay, getUserBills, getUserDetails, getUsers, getUserTransactions, getUserWithdrawals, getVendorDetail, getVendors, getVendorWithdrawals, getWallets, getWithdrawals, rejectAutoPayController, rejectAutoPayExecutionController, rejectBillRequestController, rejectPayment, rejectVendor, rejectVendorWithdrawal, toggleRechargePlan, updateRechargePlan, updateWithdrawal } from '../controllers/admin/admin.users.controller';
 import { processImage, upload } from '../middlewares/upload';
 const router = Router();
 
@@ -12,6 +12,7 @@ router.get('/getAdminDashboardData', adminAuthMiddleware, asyncHandler(getAdminD
 
 router.get('/users', adminAuthMiddleware, asyncHandler(getUsers))
 router.get('/users/:userId', adminAuthMiddleware, asyncHandler(getUserDetails))
+router.patch("/admin/users/:userId", adminAuthMiddleware, asyncHandler(adminUpdateUserProfile));
 router.get('/users/:userId/transactions', adminAuthMiddleware, asyncHandler(getUserTransactions))
 router.get('/users/:userId/withdrawals', adminAuthMiddleware, asyncHandler(getUserWithdrawals))
 router.get('/users/:userId/bills', adminAuthMiddleware, asyncHandler(getUserBills))

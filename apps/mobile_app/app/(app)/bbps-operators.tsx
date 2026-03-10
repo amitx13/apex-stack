@@ -100,8 +100,7 @@ export default function BBPSOperators() {
             });
 
             const responseData: DisplyBillResponse = billDetails.data;
-            // console.log(responseData);
-
+            
             // ✅ Fixed: use success:true instead of status==='SUCCESS'
             if (responseData?.status === true && responseData?.bill) {
 
@@ -120,7 +119,6 @@ export default function BBPSOperators() {
             }
 
         } catch (error: any) {
-            console.log("error:", error)
             if (error.response?.data?.message) {
                 showError('Error during bill fetch', error.response?.data?.message || 'Failed to fetch bill details');
             } else if (error.message) {

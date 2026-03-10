@@ -91,6 +91,7 @@ export const getUserDetails = async (req: Request, res: Response) => {
             role: true,
             code: true,
             isActive: true,
+            password:true,
             isRegistrationPayment: true,
             createdAt: true,
             sponsor: {
@@ -131,6 +132,52 @@ export const getUserDetails = async (req: Request, res: Response) => {
     if (!user) throw new ApiError(404, "Member not found.");
 
     res.status(200).json({ success: true, data: user });
+};
+
+export const adminUpdateUserProfile = async (req: Request, res: Response) => {
+    const adminId = req.user?.userId;
+    if (!adminId) throw new ApiError(401, 'Unauthorized');
+
+    // ── Target user comes from route param e.g. /admin/users/:userId ─────────
+    const { userId } = req.params;
+    if (!userId || typeof userId !== "string" ) throw new ApiError(400, 'User ID is required');
+
+    const { name, phone, password } = req.body;
+
+    // ── Fetch target user ─────────────────────────────────────────────────────
+    const existing = await prisma.user.findUnique({
+        where: { id: userId },
+    });
+    if (!existing) throw new ApiError(404, 'User not found');
+
+    // ── Phone uniqueness check ────────────────────────────────────────────────
+    if (phone && phone !== existing.phone) {
+        const phoneTaken = await prisma.user.findFirst({
+            where: { phone, NOT: { id: userId } },
+        });
+        if (phoneTaken) throw new ApiError(409, 'Phone number already in use');
+    }
+
+    // ── Build update payload ──────────────────────────────────────────────────
+    const data: any = {};
+    if (name) data.name = name.trim();
+    if (phone) data.phone = phone.trim();
+    if (password) data.password = password.trim();
+
+    if (!Object.keys(data).length) throw new ApiError(400, 'No valid fields provided to update');
+
+    // ── Update ────────────────────────────────────────────────────────────────
+    const updated = await prisma.user.update({
+        where: { id: userId },
+        data,
+        select: {
+            id: true,
+            name: true,
+            phone: true,
+        },
+    });
+
+    res.status(200).json({ success: true, data: updated });
 };
 
 // ── 3. GET /admin/users/:userId/transactions ───────────────
