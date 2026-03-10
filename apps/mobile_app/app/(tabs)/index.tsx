@@ -764,7 +764,7 @@ import {
   MaterialIcons,
 } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { api } from '@/lib/axios';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useMessage } from '@/contexts/MessageContext';

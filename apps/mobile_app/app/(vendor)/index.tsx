@@ -1,10 +1,10 @@
-import { View, ScrollView, Pressable, ActivityIndicator, Modal, TextInput, Linking } from 'react-native';
+import { View, ScrollView, Pressable, ActivityIndicator, Modal, TextInput, Linking, Animated } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { Screen } from '@/components/Screen';
 import { useAuthStore } from '@/store/authStore';
 import { Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import { useMessage } from '@/contexts/MessageContext';
 import { Vendor } from '@repo/types';
 import { api } from '@/lib/axios';
@@ -19,7 +19,7 @@ type DailySales = {
 export default function VendorDashboard() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user) as Vendor;
-  const { logout, setUser } = useAuthStore();
+  const { logout, fetchUserDetails, setUser } = useAuthStore();
   const { showMessage, showError, showSuccess, showWarning } = useMessage();
 
   const [commission, setCommission] = useState<number>(Number(user?.commissionRate) || 0);
@@ -32,6 +32,23 @@ export default function VendorDashboard() {
   const [isTodayCollectionLoading, setTodayCollectionLoading] = useState<boolean>(true);
   const [dailySales, setDailySales] = useState<DailySales | null>(null);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+
+  const spin = useRef(new Animated.Value(0)).current;
+
+  const rotate = () => {
+    Animated.timing(spin, {
+      toValue: 1,
+      duration: 500,
+      useNativeDriver: true,
+    }).start(() => spin.setValue(0));
+
+    fetchUserDetails();
+  };
+
+  const spinInterpolate = spin.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
 
   useEffect(() => {
     if (user?.commissionRate !== undefined) {
@@ -224,8 +241,6 @@ export default function VendorDashboard() {
   }
 
   if (!user) return null;
-
-  console.log("user", user)
 
   return (
     <Screen hasTabBar={false}>
@@ -460,11 +475,16 @@ export default function VendorDashboard() {
                       <Text className="text-muted-foreground text-xs leading-relaxed mb-2">
                         Your account is currently under review. You'll be able to accept payments once approved by the admin.
                       </Text>
-                      <View className="bg-red-500/10 rounded-lg px-3 py-2 self-start border border-red-500/20">
-                        {/* ✅ Status badge: text-[10px] font-semibold */}
+                      <View className="bg-red-500/10 rounded-lg px-3 py-1.5 self-start border border-red-500/20 flex-row items-center gap-2">
+
                         <Text className="text-red-400 text-[10px] font-semibold uppercase">
                           Status: {user?.approvalStatus || 'Pending'}
                         </Text>
+                        <Pressable onPress={rotate} className="ml-1 active:opacity-70" hitSlop={10}>
+                          <Animated.View style={{ transform: [{ rotate: spinInterpolate }] }}>
+                            <Ionicons name="refresh-outline" size={14} color="#EF4444" />
+                          </Animated.View>
+                        </Pressable>
                       </View>
                     </View>
                   </View>

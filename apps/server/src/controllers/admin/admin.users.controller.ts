@@ -1802,16 +1802,38 @@ export const approveVendor = async (req: Request, res: Response) => {
         throw new ApiError(400, 'Vendor id is required');
     }
 
-    const vendor = await prisma.vendor.findUnique({ where: { id } });
-    if (!vendor) throw new ApiError(404, 'Vendor not found');
-    if (vendor.approvalStatus !== 'PENDING') throw new ApiError(400, `Vendor is already ${vendor.approvalStatus}`);
-
-    await prisma.vendor.update({
-        where: { id },
-        data: { approvalStatus: 'APPROVED', isActive: true },
+    const vendor = await prisma.vendor.findUnique({
+        where: { id }
     });
 
-    res.status(200).json({ success: true, message: 'Vendor approved and activated' });
+    if (!vendor) throw new ApiError(404, 'Vendor not found');
+
+    if (vendor.approvalStatus !== 'PENDING') {
+        throw new ApiError(400, `Vendor is already ${vendor.approvalStatus}`);
+    }
+
+    await prisma.$transaction(async (tx) => {
+
+        await tx.vendor.update({
+            where: { id },
+            data: {
+                approvalStatus: 'APPROVED',
+                isActive: true
+            }
+        });
+
+        await tx.vendorWallet.create({
+            data: {
+                vendorId: vendor.id
+            }
+        });
+
+    });
+
+    res.status(200).json({
+        success: true,
+        message: 'Vendor approved and activated'
+    });
 };
 
 export const rejectVendor = async (req: Request, res: Response) => {
@@ -2084,7 +2106,7 @@ export const rejectPayment = async (req: Request, res: Response) => {
     if (typeof id !== 'string') {
         throw new ApiError(400, 'payment id is required');
     }
-    
+
     const { rejectionReason } = req.body;
 
     const payment = await prisma.payment.findUnique({ where: { id } });
