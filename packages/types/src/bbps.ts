@@ -44,12 +44,11 @@ export interface DisplyBillResponse {
 0|api  |   customerName: 'Rina Devi'
 0|api  | }
 
-
 */
 
 export interface BillData {
   acceptPayment: boolean;
-  billDate: string | null;
+  billdate: string | null;
   billFetchId: string;
   billedamount: number;
   customerName: string;

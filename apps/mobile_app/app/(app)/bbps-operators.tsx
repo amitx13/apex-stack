@@ -1,14 +1,13 @@
 import { useMessage } from "@/contexts/MessageContext";
 import { api } from "@/lib/axios";
 import { Text } from '@/components/ui/text';
-import { Screen } from '@/components/Screen';
 import { View, Pressable, ScrollView, ActivityIndicator, TextInput, Modal, KeyboardAvoidingView, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Image } from "expo-image";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BBPSOperator, DisplyBillResponse, FetchBillResponse, set } from "@repo/types";
+import { BBPSOperator, DisplyBillResponse, set } from "@repo/types";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useBillStore } from "@/store/billStore";
 

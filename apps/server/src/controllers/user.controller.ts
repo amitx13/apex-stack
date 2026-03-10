@@ -287,15 +287,6 @@ export const fetchMe = async (req: Request, res: Response) => {
                 gasConsumerNumber: true,
                 isRegistrationPayment: true,
                 bankDetails: true,
-                _count: {
-                    select: {
-                        referredUsers: {
-                            where: {
-                                isActive: true  // ✅ Filter in database
-                            }
-                        }
-                    }
-                },
             }
         });
 
@@ -304,7 +295,15 @@ export const fetchMe = async (req: Request, res: Response) => {
         }
 
         // console.log(user)
-
+        const membersCount = await prisma.userAccount.count({
+            where: {
+                parent: {
+                    userId: userId,
+                    entryType: "REGISTRATION",
+                },
+            },
+        });
+        
         res.json({
             success: true,
             user: {
@@ -316,7 +315,7 @@ export const fetchMe = async (req: Request, res: Response) => {
                 isActive: user.isActive,
                 gasConsumerNumber: user.gasConsumerNumber,
                 isRegistrationPayment: user.isRegistrationPayment,
-                membersCount: user._count.referredUsers,
+                membersCount,
                 isBankAdded: user.bankDetails !== null
             },
         });

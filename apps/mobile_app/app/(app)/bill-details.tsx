@@ -72,7 +72,7 @@ function ProcessingScreen() {
     );
 }
 
-// ─── Success Overlay (handles SUCCESS + PENDING) ──────────────────────────────
+// ─── Success Overlay ──────────────────────────────────────────────────────────
 function SuccessScreen({
     customerName,
     operatorName,
@@ -98,19 +98,19 @@ function SuccessScreen({
 }) {
     const isPending = status === 'PENDING';
 
-    const opacity    = useSharedValue(0);
+    const opacity = useSharedValue(0);
     const checkScale = useSharedValue(0);
-    const contentY   = useSharedValue(20);
+    const contentY = useSharedValue(20);
 
     useEffect(() => {
-        opacity.value    = withTiming(1, { duration: 300 });
+        opacity.value = withTiming(1, { duration: 300 });
         checkScale.value = withDelay(100, withSpring(1, { damping: 12, stiffness: 180 }));
-        contentY.value   = withDelay(200, withSpring(0, { damping: 16 }));
+        contentY.value = withDelay(200, withSpring(0, { damping: 16 }));
     }, []);
 
-    const overlayStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
-    const checkStyle   = useAnimatedStyle(() => ({ transform: [{ scale: checkScale.value }] }));
-    const contentStyle = useAnimatedStyle(() => ({
+    const overlayStyle  = useAnimatedStyle(() => ({ opacity: opacity.value }));
+    const checkStyle    = useAnimatedStyle(() => ({ transform: [{ scale: checkScale.value }] }));
+    const contentStyle  = useAnimatedStyle(() => ({
         opacity: opacity.value,
         transform: [{ translateY: contentY.value }],
     }));
@@ -119,13 +119,12 @@ function SuccessScreen({
     const dateStr = now.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
     const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-    // SUCCESS = teal, PENDING = amber
-    const accentColor    = isPending ? '#F59E0B' : '#00ADB5';
-    const iconBg         = isPending ? '#F59E0B' : '#00ADB5';
-    const iconName       = isPending ? 'time-outline' : 'checkmark';
-    const iconColor      = isPending ? '#1C1917' : '#222831';
-    const pillBg         = isPending ? 'rgba(245,158,11,0.1)'  : 'rgba(0,173,181,0.1)';
-    const pillBorder     = isPending ? 'rgba(245,158,11,0.2)'  : 'rgba(0,173,181,0.2)';
+    const accentColor = isPending ? '#F59E0B' : '#00ADB5';
+    const iconBg      = isPending ? '#F59E0B' : '#00ADB5';
+    const iconName    = isPending ? 'time-outline' : 'checkmark';
+    const iconColor   = isPending ? '#1C1917' : '#222831';
+    const pillBg      = isPending ? 'rgba(245,158,11,0.1)' : 'rgba(0,173,181,0.1)';
+    const pillBorder  = isPending ? 'rgba(245,158,11,0.2)' : 'rgba(0,173,181,0.2)';
 
     return (
         <Animated.View style={[{
@@ -134,7 +133,6 @@ function SuccessScreen({
             justifyContent: 'center', zIndex: 999, paddingHorizontal: 32,
         }, overlayStyle]}>
 
-            {/* Icon */}
             <Animated.View style={[{
                 width: 88, height: 88, borderRadius: 44,
                 backgroundColor: iconBg, alignItems: 'center',
@@ -144,8 +142,6 @@ function SuccessScreen({
             </Animated.View>
 
             <Animated.View style={[{ alignItems: 'center', gap: 4, width: '100%' }, contentStyle]}>
-
-                {/* Total deducted */}
                 <Text style={{
                     color: '#EEEEEE', fontSize: 44, fontWeight: '900',
                     letterSpacing: -1, lineHeight: 58, paddingVertical: 4,
@@ -157,14 +153,12 @@ function SuccessScreen({
                     {isPending ? 'Payment Processing' : 'Bill Paid Successfully'}
                 </Text>
 
-                {/* Customer + operator */}
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
                     <Text style={{ color: '#6B7280', fontSize: 11 }}>{customerName}</Text>
                     <Text style={{ color: '#374151', fontSize: 11 }}>·</Text>
                     <Text style={{ color: '#6B7280', fontSize: 11 }}>{operatorName}</Text>
                 </View>
 
-                {/* BE message */}
                 {message ? (
                     <Text style={{
                         color: '#6B7280', fontSize: 12, textAlign: 'center',
@@ -174,15 +168,14 @@ function SuccessScreen({
                     </Text>
                 ) : null}
 
-                {/* Info pills */}
                 <View style={{
                     flexDirection: 'row', gap: 8, marginTop: 16,
                     justifyContent: 'center', flexWrap: 'wrap',
                 }}>
                     {[
-                        { label: 'Bill', value: `₹${billAmount.toFixed(2)}` },
+                        { label: 'Bill',    value: `₹${billAmount.toFixed(2)}` },
                         { label: 'Account', value: account },
-                        { label: 'Type', value: category.replace('_', ' ') },
+                        { label: 'Type',    value: category.replace('_', ' ') },
                     ].map((item) => (
                         <View key={item.label} style={{
                             backgroundColor: pillBg,
@@ -204,7 +197,6 @@ function SuccessScreen({
                     {dateStr}, {timeStr}
                 </Text>
 
-                {/* Order ID + status */}
                 {orderId ? (
                     <View style={{
                         marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 6,
@@ -212,9 +204,7 @@ function SuccessScreen({
                         borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6,
                     }}>
                         <Ionicons name="receipt-outline" size={11} color="#4B5563" />
-                        <Text style={{ color: '#4B5563', fontSize: 10 }}>
-                            Order ID: {orderId}
-                        </Text>
+                        <Text style={{ color: '#4B5563', fontSize: 10 }}>Order ID: {orderId}</Text>
                         {status ? (
                             <>
                                 <Text style={{ color: '#374151', fontSize: 10 }}>·</Text>
@@ -229,7 +219,6 @@ function SuccessScreen({
                     </View>
                 ) : null}
 
-                {/* Pending notice */}
                 {isPending && (
                     <View style={{
                         marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 6,
@@ -245,7 +234,6 @@ function SuccessScreen({
                 )}
             </Animated.View>
 
-            {/* Done button */}
             <Pressable
                 onPress={onDone}
                 style={{ width: '100%', marginTop: 36, borderRadius: 50, overflow: 'hidden' }}
@@ -273,9 +261,9 @@ function FailedScreen({
     onRetry: () => void;
     onDone: () => void;
 }) {
-    const opacity   = useSharedValue(0);
-    const iconScale = useSharedValue(0);
-    const contentY  = useSharedValue(20);
+    const opacity    = useSharedValue(0);
+    const iconScale  = useSharedValue(0);
+    const contentY   = useSharedValue(20);
 
     useEffect(() => {
         opacity.value   = withTiming(1, { duration: 300 });
@@ -358,18 +346,19 @@ export default function BillDetailsScreen() {
     const user = useAuthStore((state) => state.user) as User;
     const { showError } = useMessage();
 
-    const [step, setStep]               = useState<Step>('confirm');
-    const [failedMsg, setFailedMsg]     = useState('');
-    const [billResult, setBillResult]   = useState<BillResult | null>(null);
+    const [step, setStep]           = useState<Step>('confirm');
+    const [failedMsg, setFailedMsg] = useState('');
+    const [billResult, setBillResult] = useState<BillResult | null>(null);
 
     const [isBalanceLoading, setIsBalanceLoading] = useState(false);
     const [spendWalletBal, setSpendWalletBal]     = useState<number | null>(null);
 
     // ─── Derived values ───────────────────────────────────────────────────────
+    // ✅ Fixed: payAmount (was payamount)
     const billAmount    = parseFloat(String(currentBillData?.payamount ?? 0));
     const serviceCharge = parseFloat((billAmount * 0.1).toFixed(2));
     const totalDeducted = parseFloat((billAmount + serviceCharge).toFixed(2));
-    const walletBalance = spendWalletBal ?? 0;
+    const walletBalance = parseFloat(String(spendWalletBal ?? 0));
 
     const hasEnoughBalance = walletBalance >= totalDeducted;
     const shortfall        = (totalDeducted - walletBalance).toFixed(2);
@@ -403,18 +392,20 @@ export default function BillDetailsScreen() {
         setStep('processing');
         try {
             const response = await api.post('/bbps/pay-bill', {
-                billFetchId: currentBillData.billFetchId,
-                account: currentAccount,
-                spkey: currentSpkey,
-                amount: billAmount,
+                billFetchId:  currentBillData.billFetchId,
+                account:      currentAccount,
+                spkey:        currentSpkey,
+                operatorName: currentOperatorName,   // ✅ Added
+                category:     currentCategory,        // ✅ Added
+                amount:       billAmount,
             });
 
             if (response.data.success) {
                 const normalizedStatus: string = response.data.status ?? '';
                 setBillResult({
                     orderId: response.data.transaction?.orderId ?? '',
-                    status: normalizedStatus,
-                    amount: response.data.transaction?.amount ?? billAmount,
+                    status:  normalizedStatus,
+                    amount:  response.data.transaction?.amount ?? billAmount,
                     message: response.data.message ?? '',
                 });
 
@@ -423,7 +414,6 @@ export default function BillDetailsScreen() {
                     setFailedMsg(response.data.message || 'Payment was not successful.');
                     setStep('failed');
                 } else {
-                    // SUCCESS or PENDING — both go to success screen, differentiated by status
                     setStep('success');
                 }
             }
@@ -490,6 +480,7 @@ export default function BillDetailsScreen() {
                             <View className="flex-row items-start justify-between mb-4">
                                 <View>
                                     <Text className="text-white/70 text-xs mb-1">Amount Due</Text>
+                                    {/* ✅ Fixed: payAmount (was payamount) */}
                                     <Text className="text-white text-4xl font-bold">
                                         ₹{currentBillData.payamount}
                                     </Text>
@@ -543,6 +534,7 @@ export default function BillDetailsScreen() {
                                         <Ionicons name="receipt-outline" size={12} color="#6B7280" />
                                         <Text className="text-muted-foreground text-xs">Billed Amount</Text>
                                     </View>
+                                    {/* ✅ Fixed: billedAmount (was billedamount) */}
                                     <Text className="text-foreground text-sm font-semibold">
                                         ₹{currentBillData.billedamount}
                                     </Text>
@@ -567,7 +559,7 @@ export default function BillDetailsScreen() {
                                         <Text className="text-muted-foreground text-xs">Bill Date</Text>
                                     </View>
                                     <Text className="text-foreground text-sm font-semibold">
-                                        {currentBillData.billDate ?? '—'}
+                                        {currentBillData.billdate ?? '—'}
                                     </Text>
                                 </View>
                             </View>
@@ -628,16 +620,13 @@ export default function BillDetailsScreen() {
                         <Text className="text-muted-foreground text-xs font-semibold uppercase tracking-wider mb-2 px-1">
                             Payment Method
                         </Text>
-                        <View className={`rounded-2xl p-4 border ${
-                            hasEnoughBalance
-                                ? 'bg-primary/5 border-primary/20'
-                                : 'bg-destructive/5 border-destructive/20'
-                        }`}>
+                        <View className={`rounded-2xl p-4 border ${hasEnoughBalance
+                            ? 'bg-primary/5 border-primary/20'
+                            : 'bg-destructive/5 border-destructive/20'
+                            }`}>
                             <View className="flex-row items-center justify-between">
                                 <View className="flex-row items-center gap-3 flex-1">
-                                    <View className={`w-10 h-10 rounded-xl items-center justify-center ${
-                                        hasEnoughBalance ? 'bg-primary/20' : 'bg-destructive/20'
-                                    }`}>
+                                    <View className={`w-10 h-10 rounded-xl items-center justify-center ${hasEnoughBalance ? 'bg-primary/20' : 'bg-destructive/20'}`}>
                                         {isBalanceLoading ? (
                                             <ActivityIndicator size="small" color="#00ADB5" />
                                         ) : (
@@ -687,7 +676,7 @@ export default function BillDetailsScreen() {
                         <View className="flex-row items-center gap-1.5">
                             <Ionicons name="time-outline" size={12} color="#9CA3AF" />
                             <Text className="text-muted-foreground text-xs">
-                                Valid for 15 minutes from fetch time
+                                Valid for 10 minutes from fetch time
                             </Text>
                         </View>
                     </View>

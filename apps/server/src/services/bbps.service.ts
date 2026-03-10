@@ -87,18 +87,53 @@ class BBPSService {
    * Generic: Fetch bill for any BBPS category
    */
   async fetchBill(params: FetchBillParams) {
-    const { userId, category, account, spkey, ad1, ad2, ad3 } = params;
+    const { userId, category, account, spkey, operatorName, ad1, ad2, ad3 } = params;
+    const serviceType = this.mapCategoryToServiceType(category);
 
-    // Get user's mobile number (cust_mbl)
+    // ── 1. Return cached PENDING fetch within 10-min billFetchId validity ──
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+
+    const cached = await prisma.serviceTransaction.findFirst({
+      where: {
+        userId,
+        serviceType,
+        operatorCode: spkey,
+        mobileNumber: account,
+        status: 'PENDING',
+        billFetchId: { not: null },
+        createdAt: { gte: tenMinutesAgo },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    console.log('cached Bill Response:', cached);
+
+    if (cached) {
+      return {
+        status: true,
+        category,
+        bill: {
+          billFetchId: cached.billFetchId,
+          customerName: cached.customerName,
+          billedamount: cached.billedAmount?.toString() ?? null,
+          payamount: cached.amount?.toString() ?? null,
+          dueDate: cached.dueDate?.toISOString() ?? null,
+          billdate: cached.billDate?.toISOString() ?? null,
+          partPayment: cached.partPayment ?? false,
+          acceptPayment: true,
+        },
+      };
+    }
+
+    // ── 2. Get user phone ──
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { phone: true },
     });
 
-    if (!user?.phone) {
-      throw new ApiError(400, 'User phone number not found');
-    }
+    if (!user?.phone) throw new ApiError(400, 'User phone number not found');
 
+    // ── 3. Call BBPS API ──
     const billResponse: FetchBillResponse = await imwalletAPIService.fetchBBPSBill({
       account,
       spkey,
@@ -116,16 +151,40 @@ class BBPSService {
 
     const data = billResponse.data;
 
+    // ── 4. Save PENDING transaction (cache + reuse in payBill) ──
+    await prisma.serviceTransaction.create({
+      data: {
+        userId,
+        serviceType,
+        operatorName,
+        operatorCode: spkey,
+        mobileNumber: account,
+        orderId: this.generateOrderId('BF'),
+        status: 'PENDING',
+        amount: new Decimal(data.payamount ?? data.billedamount ?? 0),
+        billFetchId: data.billFetchId,
+        customerName: data.customerName ?? null,
+        billedAmount: data.billedamount ? new Decimal(data.billedamount) : null,
+        dueDate: data.dueDate ? new Date(data.dueDate) : null,
+        billDate: data.billdate ? new Date(data.billdate) : null,
+        partPayment:
+          typeof data.partPayment === 'boolean'
+            ? data.partPayment
+            : data.partPayment === 'true',
+      },
+    });
+
+
     return {
       status: true,
       category,
       bill: {
         billFetchId: data.billFetchId,
         customerName: data.customerName,
-        billedAmount: data.billedamount,
-        payAmount: data.payamount,
-        dueDate: data.dueDate,
-        billDate: data.billDate,
+        billedamount: data.billedamount?.toString() ?? null,
+        payamount: data.payamount?.toString() ?? null,
+        dueDate: data.dueDate ?? null,
+        billdate: data.billdate ?? null,
         partPayment: data.partPayment,
         acceptPayment: data.acceptPayment,
       },
@@ -137,72 +196,69 @@ class BBPSService {
    */
   async payBill(params: PayBillParams) {
     const {
-      userId,
-      category,
-      account,
-      spkey,
-      operatorName,
-      amount,
-      billFetchId,
-      customerName,
-      dueDate,
-      billDate,
-      billedAmount,
-      ad1,
-      ad2,
-      ad3,
+      userId, category, account, spkey, operatorName,
+      amount, billFetchId, ad1, ad2, ad3,
     } = params;
 
     if (amount < 10 || amount > 50000) {
       throw new ApiError(400, 'Amount must be between ₹10 and ₹50,000');
     }
 
-    // Check SPEND wallet
     const spendWallet = await prisma.wallet.findFirst({
       where: { userId, type: 'SPEND' },
     });
 
-    if (!spendWallet) {
-      throw new ApiError(400, 'SPEND wallet not found');
-    }
+    if (!spendWallet) throw new ApiError(400, 'SPEND wallet not found');
 
     if (spendWallet.balance.toNumber() < amount) {
       throw new ApiError(400, 'Insufficient balance in SPEND wallet');
     }
 
-    // Get user phone for cust_mbl
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { phone: true },
     });
 
-    if (!user?.phone) {
-      throw new ApiError(400, 'User phone number not found');
-    }
+    if (!user?.phone) throw new ApiError(400, 'User phone number not found');
 
+    const serviceType = this.mapCategoryToServiceType(category);
     const orderId = this.generateOrderId('BB');
 
-    // Create transaction (PENDING)
-    const serviceType = this.mapCategoryToServiceType(category);
+    // Reuse the existing PENDING fetch transaction if billFetchId matches
+    let transaction = await (async () => {
+      if (billFetchId && billFetchId !== 'NA') {
+        const fetchTxn = await prisma.serviceTransaction.findFirst({
+          where: { userId, billFetchId, status: 'PENDING' },
+        });
 
-    const transaction = await prisma.serviceTransaction.create({
-      data: {
-        userId,
-        serviceType,
-        operatorName,
-        operatorCode: spkey,
-        amount: new Decimal(amount),
-        mobileNumber: account,
-        orderId,
-        status: 'PENDING',
-        billFetchId: billFetchId || null,
-        customerName: customerName || null,
-        dueDate: dueDate ? new Date(dueDate) : null,
-        billDate: billDate ? new Date(billDate) : null,
-        billedAmount: billedAmount ? new Decimal(billedAmount) : null,
-      },
-    });
+        if (fetchTxn) {
+          return prisma.serviceTransaction.update({
+            where: { id: fetchTxn.id },
+            data: {
+              orderId,  // replace BF-prefixed orderId with actual payment orderId
+              amount: new Decimal(amount),
+            },
+          });
+        }
+      }
 
+      // No prior fetch (direct payment) — create fresh PENDING transaction
+      return prisma.serviceTransaction.create({
+        data: {
+          userId,
+          serviceType,
+          operatorName,
+          operatorCode: spkey,
+          mobileNumber: account,
+          orderId,
+          status: 'PENDING',
+          amount: new Decimal(amount),
+          billFetchId: billFetchId ?? null,
+        },
+      });
+    })();
+
+    // Call BBPS pay API
     let bbpsResponse: any;
 
     try {
@@ -226,9 +282,7 @@ class BBPSService {
         data: {
           imwalletTxnId: bbpsResponse.imwtid,
           operatorTxnId: bbpsResponse.oprID,
-          commission: bbpsResponse.gross_comm
-            ? new Decimal(bbpsResponse.gross_comm)
-            : null,
+          commission: bbpsResponse.gross_comm ? new Decimal(bbpsResponse.gross_comm) : null,
           imwalletResponse: bbpsResponse as any,
         },
       });
@@ -256,9 +310,8 @@ class BBPSService {
     }
 
     if (normalizedStatus === 'SUCCESS' || normalizedStatus === 'PENDING') {
-
-      const userCommission = new Decimal(amount).mul(10).div(100)
-      const totalAmt = new Decimal(amount).add(userCommission)
+      const userCommission = new Decimal(amount).mul(10).div(100);
+      const totalAmt = new Decimal(amount).add(userCommission);
 
       const result = await prisma.$transaction(async (tx) => {
         const walletTxnId = await deductFromWallet(
@@ -278,20 +331,15 @@ class BBPSService {
             walletTransactionId: walletTxnId,
           },
           include: {
-            user: {
-              select: {
-                id: true,
-                sponsorId: true,
-              }
-            }
-          }
+            user: { select: { id: true, sponsorId: true } },
+          },
         });
 
         return { updatedTransaction };
       });
 
       if (normalizedStatus === 'SUCCESS') {
-        const { adminId } = await getAdminSystemIds()
+        const { adminId } = await getAdminSystemIds();
 
         await handleCommissionSplit(
           userCommission,
@@ -317,6 +365,7 @@ class BBPSService {
 
     throw new ApiError(500, `Unexpected status from payment service: ${bbpsResponse.status}`);
   }
+
 
   /**
    * Generic BBPS callback handler
