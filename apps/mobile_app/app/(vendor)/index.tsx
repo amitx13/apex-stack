@@ -491,7 +491,7 @@ export default function VendorDashboard() {
 
                   <View className="mt-3 pt-3 border-t border-red-500/20">
                     <Pressable
-                      onPress={() => Linking.openURL('mailto:support@indianutilityservices.in')}
+                      onPress={() => Linking.openURL('mailto:indianutilityservice1987@gmail.com')}
                       className="flex-row items-center justify-center gap-2 py-2 active:opacity-70"
                     >
                       <Ionicons name="help-circle-outline" size={16} color="#EF4444" />

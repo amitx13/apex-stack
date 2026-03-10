@@ -295,7 +295,7 @@ export default function AccountScreen() {
     const TERMS_URL = 'https://indianutilityservices-legal.pages.dev/terms';
     const PRIVACY_URL = 'https://indianutilityservices-legal.pages.dev/privacy-policy';
     const REFUND_URL = 'https://indianutilityservices-legal.pages.dev/refund-policy';
-    const SUPPORT_EMAIL = 'support@indianutilityservices.in';
+    const SUPPORT_EMAIL = 'indianutilityservice1987@gmail.com';
 
     const showDeleteConfirm = () => {
         showError(
