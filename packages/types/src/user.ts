@@ -135,8 +135,6 @@ export const SignUpVendor = z.object({
     .string()
     .min(1, "Referral code is required")
     .length(6, "Referral code must be exactly 6 characters")
-    .regex(/^[A-Z0-9]{6}$/, "Referral code must contain only uppercase letters and numbers")
-    .transform(val => val.toUpperCase()),
 });
 
 export type SignUpVendorInput = z.infer<typeof SignUpVendor>;
