@@ -120,7 +120,7 @@ export default function BBPSOperators() {
             }
 
         } catch (error: any) {
-            // console.log("error:", error)
+            console.log("error:", error)
             if (error.response?.data?.message) {
                 showError('Error during bill fetch', error.response?.data?.message || 'Failed to fetch bill details');
             } else if (error.message) {

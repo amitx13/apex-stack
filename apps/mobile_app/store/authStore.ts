@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { secureStorage } from '../lib/secureStorage';
 import { api } from '@/lib/axios';
 import { AppUser, SignUpUserInput, SignUpVendorInput } from '@repo/types'
-import { useRouter } from 'expo-router';
+// import { useRouter } from 'expo-router';
 
 interface AuthState {
   // State

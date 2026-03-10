@@ -757,7 +757,7 @@
 // };
 import { Text } from '@/components/ui/text';
 import { useAuthStore } from '@/store/authStore';
-import { View, Pressable, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Pressable, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
 import {
   Ionicons,
   MaterialCommunityIcons,
@@ -1110,10 +1110,21 @@ export default function HomeScreen() {
                       <Text className="text-foreground text-[11px]">{new Date(paymentRecord!.createdAt).toLocaleDateString('en-IN', { dateStyle: 'medium' })}</Text>
                     </View>
                   </View>
+
+                  {/* ✅ Refresh Button */}
+                  <TouchableOpacity
+                    onPress={fetchUserDetails}
+                    className="flex-row items-center justify-center gap-2 py-2.5 bg-amber-500/20 rounded-xl border border-amber-500/25"
+                  >
+                    <Ionicons name="refresh-outline" size={14} color="#F59E0B" />
+                    <Text className="text-amber-400 text-[11px] font-bold">Check Status</Text>
+                  </TouchableOpacity>
+
                 </View>
               </LinearGradient>
             </View>
           )}
+
 
           {/* ── REJECTED ──────────────────────────────────── */}
           {isRejected && (

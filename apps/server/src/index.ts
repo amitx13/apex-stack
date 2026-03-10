@@ -12,7 +12,6 @@ import rechargeRoutes from "./routes/recharge.routes.js"
 import bbpsRoutes from "./routes/bbps.routes.js"
 import { startAutopayCorn, startReentryCron, startSettlementCron } from "./jobs/cron.js";
 import cookieParser from "cookie-parser";
-import axios from "axios";
 
 dotenv.config();
 

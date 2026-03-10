@@ -388,34 +388,56 @@ function AutoPayCard({
                         </View>
                     )}
 
-                    {/* Action buttons */}
                     {(item.status === 'ACTIVE' || item.status === 'PAUSED') && (
-                        <View style={{
-                            flexDirection: 'row', gap: 8,
-                            paddingHorizontal: 17, paddingVertical: 12,
-                        }}>
+                        <View
+                            style={{
+                                flexDirection: 'row',
+                                gap: 10,
+                                paddingHorizontal: 17,
+                                paddingTop: 12,
+                                paddingBottom: 14,
+                            }}
+                        >
                             {item.status === 'ACTIVE' && (
                                 <Pressable
                                     onPress={() => onPause(item.id)}
                                     style={({ pressed }) => ({
-                                        flex: 1, borderRadius: 10,
+                                        flex: 1.15,
+                                        borderRadius: 12,
                                         backgroundColor: pressed
-                                            ? 'rgba(251,146,60,0.15)'
+                                            ? 'rgba(251,146,60,0.22)'
                                             : 'rgba(251,146,60,0.08)',
-                                        borderWidth: 1,
-                                        borderColor: 'rgba(251,146,60,0.25)',
-                                        paddingVertical: 10,
-                                        alignItems: 'center', justifyContent: 'center',
-                                        flexDirection: 'row', gap: 6,
+                                        borderWidth: 1.2,
+                                        borderColor: pressed
+                                            ? 'rgba(251,146,60,0.45)'
+                                            : 'rgba(251,146,60,0.25)',
+                                        paddingVertical: 12,
+                                        paddingHorizontal: 14,
+                                        minHeight: 44,
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
                                     })}
                                 >
-                                    <Ionicons name="pause-circle-outline" size={14} color="#FB923C" />
-                                    <Text style={{
-                                        color: '#FB923C',
-                                        fontSize: 12, fontWeight: '700',
-                                    }}>
-                                        Pause
-                                    </Text>
+                                    <View
+                                        style={{
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: 8,
+                                        }}
+                                    >
+                                        <Ionicons name="pause-circle" size={18} color="#FB923C" />
+                                        <Text
+                                            style={{
+                                                color: '#FB923C',
+                                                fontSize: 13,
+                                                fontWeight: '700',
+                                                letterSpacing: 0.2,
+                                            }}
+                                        >
+                                            Pause
+                                        </Text>
+                                    </View>
                                 </Pressable>
                             )}
 
@@ -423,48 +445,84 @@ function AutoPayCard({
                                 <Pressable
                                     onPress={() => onResume(item.id)}
                                     style={({ pressed }) => ({
-                                        flex: 1, borderRadius: 10,
+                                        flex: 1.15,
+                                        borderRadius: 12,
                                         backgroundColor: pressed
-                                            ? 'rgba(52,211,153,0.15)'
+                                            ? 'rgba(52,211,153,0.22)'
                                             : 'rgba(52,211,153,0.08)',
-                                        borderWidth: 1,
-                                        borderColor: 'rgba(52,211,153,0.25)',
-                                        paddingVertical: 10,
-                                        alignItems: 'center', justifyContent: 'center',
-                                        flexDirection: 'row', gap: 6,
+                                        borderWidth: 1.2,
+                                        borderColor: pressed
+                                            ? 'rgba(52,211,153,0.45)'
+                                            : 'rgba(52,211,153,0.25)',
+                                        paddingVertical: 12,
+                                        paddingHorizontal: 14,
+                                        minHeight: 44,
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
                                     })}
                                 >
-                                    <Ionicons name="play-circle-outline" size={14} color="#34D399" />
-                                    <Text style={{
-                                        color: '#34D399',
-                                        fontSize: 12, fontWeight: '700',
-                                    }}>
-                                        Resume
-                                    </Text>
+                                    <View
+                                        style={{
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: 8,
+                                        }}
+                                    >
+                                        <Ionicons name="play-circle" size={18} color="#34D399" />
+                                        <Text
+                                            style={{
+                                                color: '#34D399',
+                                                fontSize: 13,
+                                                fontWeight: '700',
+                                                letterSpacing: 0.2,
+                                            }}
+                                        >
+                                            Resume
+                                        </Text>
+                                    </View>
                                 </Pressable>
                             )}
 
                             <Pressable
                                 onPress={() => onCancel(item.id)}
                                 style={({ pressed }) => ({
-                                    flex: 1, borderRadius: 10,
+                                    flex: 0.95,
+                                    borderRadius: 12,
                                     backgroundColor: pressed
-                                        ? 'rgba(248,113,113,0.15)'
+                                        ? 'rgba(248,113,113,0.22)'
                                         : 'rgba(248,113,113,0.08)',
-                                    borderWidth: 1,
-                                    borderColor: 'rgba(248,113,113,0.25)',
-                                    paddingVertical: 10,
-                                    alignItems: 'center', justifyContent: 'center',
-                                    flexDirection: 'row', gap: 6,
+                                    borderWidth: 1.2,
+                                    borderColor: pressed
+                                        ? 'rgba(248,113,113,0.45)'
+                                        : 'rgba(248,113,113,0.25)',
+                                    paddingVertical: 12,
+                                    paddingHorizontal: 14,
+                                    minHeight: 44,
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
                                 })}
                             >
-                                <Ionicons name="close-circle-outline" size={14} color="#F87171" />
-                                <Text style={{
-                                    color: '#F87171',
-                                    fontSize: 12, fontWeight: '700',
-                                }}>
-                                    Cancel
-                                </Text>
+                                <View
+                                    style={{
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: 8,
+                                    }}
+                                >
+                                    <Ionicons name="close-circle" size={18} color="#F87171" />
+                                    <Text
+                                        style={{
+                                            color: '#F87171',
+                                            fontSize: 13,
+                                            fontWeight: '700',
+                                            letterSpacing: 0.2,
+                                        }}
+                                    >
+                                        Cancel
+                                    </Text>
+                                </View>
                             </Pressable>
                         </View>
                     )}

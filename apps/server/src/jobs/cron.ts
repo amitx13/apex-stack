@@ -53,31 +53,36 @@ export function startAutopayCorn() {
 
   const isProduction = process.env.NODE_ENV === 'production';
 
-    // Development: "*/5 * * * *" = every 5 minutes
-  const schedule = isProduction ? '30 3 5,10,15 * *' : '*/5 * * * *';
+  const schedule = isProduction ? '0 9 5,10,15 * *' : '*/5 * * * *';
 
-  cron.schedule(schedule, async () => {
-    const today = new Date();
-    const date = today.getDate();
+  cron.schedule(
+    schedule,
+    async () => {
+      const today = new Date();
+      const date = today.getDate();
 
-    const dueDateMap: Record<number, 'FIVE' | 'TEN' | 'FIFTEEN'> = {
-      5: 'FIVE',
-      10: 'TEN',
-      15: 'FIFTEEN',
-    };
+      const dueDateMap: Record<number, 'FIVE' | 'TEN' | 'FIFTEEN'> = {
+        5: 'FIVE',
+        10: 'TEN',
+        15: 'FIFTEEN',
+      };
 
-    const dueDate = dueDateMap[date];
-    if (!dueDate) return;
+      const dueDate = dueDateMap[date];
+      if (!dueDate) return;
 
-    console.log(`[AutoPay Cron] Running for dueDate: ${dueDate}`);
+      console.log(`[AutoPay Cron] Running for dueDate: ${dueDate}`);
 
-    try {
-      const results = await runAutoPayCron(dueDate);
-      console.log(`[AutoPay Cron] Done:`, results);
-    } catch (error) {
-      console.error(`[AutoPay Cron] Fatal error:`, error);
+      try {
+        const results = await runAutoPayCron(dueDate);
+        console.log(`[AutoPay Cron] Done:`, results);
+      } catch (error) {
+        console.error(`[AutoPay Cron] Fatal error:`, error);
+      }
+    },
+    {
+      timezone: 'Asia/Kolkata',
     }
-  });
+  );
 
   console.log('[AutoPay Cron] Scheduled for 5th, 10th, 15th at 9:00 AM IST');
 }
