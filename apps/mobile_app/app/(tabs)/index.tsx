@@ -831,20 +831,22 @@ export default function HomeScreen() {
 
   const getUserRank = (n: number) => {
     if (n < 5) return 'Starter';
-    if (n < 25) return 'Bronze';
-    if (n < 125) return 'Silver';
-    if (n < 625) return 'Gold';
-    if (n < 3125) return 'Platinum';
+    if (n < 30) return 'Bronze';    // 5  + 25  = 30
+    if (n < 155) return 'Silver';    // 30 + 125 = 155
+    if (n < 780) return 'Gold';      // 155 + 625 = 780
+    if (n < 3905) return 'Platinum';  // 780 + 3125 = 3905
     return 'Diamond';
-  }
+  };
 
   const getRankMeta = (n: number) => {
     if (n < 5) return { color: '#9CA3AF', bg: 'rgba(156,163,175,0.15)' };
-    if (n < 25) return { color: '#3B82F6', bg: 'rgba(59,130,246,0.15)' };
-    if (n < 125) return { color: '#A855F7', bg: 'rgba(168,85,247,0.15)' };
-    if (n < 625) return { color: '#F59E0B', bg: 'rgba(245,158,11,0.15)' };
-    return { color: '#F43F5E', bg: 'rgba(244,63,94,0.15)' };
+    if (n < 30) return { color: '#3B82F6', bg: 'rgba(59,130,246,0.15)' };
+    if (n < 155) return { color: '#A855F7', bg: 'rgba(168,85,247,0.15)' };
+    if (n < 780) return { color: '#F59E0B', bg: 'rgba(245,158,11,0.15)' };
+    if (n < 3905) return { color: '#F43F5E', bg: 'rgba(244,63,94,0.15)' };
+    return { color: '#06B6D4', bg: 'rgba(6,182,212,0.15)' };
   };
+
 
   const handleOpenLogoutSheet = useCallback(() => {
     showMessage('error', 'Logout Confirmation', 'Are you sure you want to logout from your account?', {
