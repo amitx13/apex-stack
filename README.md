@@ -1,6 +1,6 @@
-## Apex-PE
+## IUS
 
-Apex-PE is a multi-module payment platform consisting of a user mobile app (Android/iOS), an admin dashboard, and backend services. The platform supports wallet functionality including recharge, bill payments, and gas booking.
+IUS is a multi-module payment platform consisting of a user mobile app (Android/iOS), an admin dashboard, and backend services. The platform supports wallet functionality including recharge, bill payments, and gas booking.
 
 ## 🧩 Project Structure
 
